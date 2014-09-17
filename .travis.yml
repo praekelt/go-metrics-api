@@ -1,0 +1,19 @@
+language: python
+python:
+  - "2.6"
+  - "2.7"
+services:
+  - riak
+before_install:
+  # we need the protobuf-compiler so we can install Riak client libraries
+  - sudo apt-get install -qq protobuf-compiler
+install:
+  - "pip install -r requirements.txt --use-wheel"
+  - "pip install coveralls --use-wheel"
+  - "pip install -e ."
+  # We need to install the verified fake as well so we can test it.
+  - "pip install -e ./verified-fake"
+script:
+  - coverage run --source=go_metrics `which trial` go_metrics
+after_success:
+  - coveralls
