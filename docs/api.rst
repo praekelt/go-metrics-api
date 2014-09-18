@@ -90,7 +90,7 @@ Authentication is done using an OAuth bearer token.
 
 .. sourcecode:: http
 
-    GET /api/contacts/ HTTP/1.1
+    GET /api/metrics/ HTTP/1.1
     Host: example.com
     Authorization: Bearer auth-token
 
