@@ -9,7 +9,7 @@ Contents
 - :ref:`api-authentication`
 - :ref:`api-methods`
 
-    - :http:get:`/`
+    - :http:get:`/api/metrics`
 
 .. _response-format-overview:
 
@@ -118,7 +118,7 @@ Authentication is done using an OAuth bearer token.
 API Methods
 -----------
 
-.. http:get:: /
+.. http:get:: /api/metrics/
 
     Retrieves the timestamp-value pairs of the metrics specified as query
     parameters.
@@ -145,7 +145,7 @@ API Methods
 
     .. sourcecode:: http
 
-        GET /?m=stores.a.a.last&m=stores.b.c.avg&from=-30d&until=-1d&interval=1day&align_to_from=true HTTP/1.1
+        GET /api/metrics/?m=stores.a.a.last&m=stores.b.c.avg&from=-30d&until=-1d&interval=1day&align_to_from=true HTTP/1.1
         Host: example.com
         Authorization: Bearer auth-token
 
