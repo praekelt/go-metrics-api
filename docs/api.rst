@@ -136,10 +136,10 @@ API Methods
 
     :query interval: The size of the time buckets into which metric values
     should be summarized. Can be in any form accepted by graphite. See
-    graphite's `functions` documentation. Defaults to ``1hour``.
+    graphite's `functions`_ documentation. Defaults to ``1hour``.
 
     :query align_to_from: align the time buckets into which metric values are
-    summarized against the given ``from`` time. Defaults to false.
+    summarized against the given ``from`` time. Defaults to ``false``.
 
     **Example request**:
 
