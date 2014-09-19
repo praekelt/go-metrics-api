@@ -76,7 +76,7 @@ names take the form ``conversations.<conv_id>.<metric_name>.<agg_method>``:
     - ``agg_method``: the aggregation method used to publish metric values (e.g.
       ``last``).
 
-*Note*: At the time of writing, conversation metrics are not yet ready for use.
+At the time of writing, conversation metrics are only fired by internal Vumi Go processes.
 
 
 .. _api-authentication:
@@ -175,8 +175,9 @@ API Methods
 
    **Description of the JSON response attributes**:
 
-   The response contains mappings between the metric names and their
-   timestamp-value pairs.
+   The response contains mappings between the metric names and an array of
+   their timestamp-value pairs, where the pairs in the array are in ascending
+   order of their timestamp values (from the earliest time to the latest time).
    
    Each pair contains the timestamp under the ``x`` field, and is formatted as
    the number of milliseconds elapsed since 1 January 1970 00:00:00 UTC.
