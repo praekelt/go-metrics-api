@@ -39,7 +39,9 @@ class MetricsBackend(object):
     model_class = Metrics
     config_class = MetricsBackendConfig
 
-    def __init__(self, config):
+    def __init__(self, config=None):
+        if config is None:
+            config = {}
         self.config = self.config_class(config)
         self.initialize()
 
