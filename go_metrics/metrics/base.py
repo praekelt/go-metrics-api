@@ -4,7 +4,7 @@ from confmodel import Config
 class Metrics(object):
     """
     A model encapsulating how metric values are queried for a particular
-    backend and owner id.  Intended to be subclassed with backend-specific
+    backend and owner id. Intended to be subclassed with backend-specific
     logic.
     """
 
@@ -34,7 +34,7 @@ class MetricsBackendConfig(Config):
 
 class MetricsBackend(object):
     """
-    Ensapsulates how machinery specific to a metrics backend.
+    Ensapsulates machinery specific to a metrics backend.
     """
     model_class = Metrics
     config_class = MetricsBackendConfig
