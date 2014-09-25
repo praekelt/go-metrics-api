@@ -5,6 +5,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go_api.cyclone.helpers import MockHttpServer
 
+from go_metrics.metrics.base import MetricsBackendError
 from go_metrics.metrics.graphite import GraphiteMetrics, GraphiteBackend
 
 
@@ -137,6 +138,24 @@ class TestGraphiteMetrics(TestCase):
                 "alias(summarize(go.campaigns.owner-1.stores.a.b.last,"
                 " '1hour', 'last', false), stores.a.b.last)"],
         })
+
+    @inlineCallbacks
+    def test_get_backend_error(self):
+        def handler(req):
+            req.setResponseCode(400)
+            return ':('
+
+        graphite = yield self.mk_graphite(handler)
+        backend = GraphiteBackend({'graphite_url': graphite.url})
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        try:
+            yield metrics.get()
+        except MetricsBackendError, e:
+            self.assertEqual(str(e),
+                "Got error response for request to graphite: (400) :(")
+        else:
+            self.fail("Expected an error")
 
 
 class TestGraphiteBackend(TestCase):

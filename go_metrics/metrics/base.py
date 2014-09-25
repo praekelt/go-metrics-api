@@ -1,6 +1,12 @@
 from confmodel import Config
 
 
+class MetricsBackendError(Exception):
+    """
+    Raised when an error occurs whilst interacting with a metrics backend.
+    """
+
+
 class Metrics(object):
     """
     A model encapsulating how metric values are queried for a particular

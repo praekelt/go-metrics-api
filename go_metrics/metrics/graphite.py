@@ -11,11 +11,15 @@ import treq
 
 from confmodel.fields import ConfigText
 
-from go_metrics.metrics.base import Metrics, MetricsBackend
+from go_metrics.metrics.base import Metrics, MetricsBackend, MetricsBackendError
 
 
 def agg_from_name(name):
     return name.split('.')[-1]
+
+
+def is_error(resp):
+    return 400 <= resp.code <= 599
 
 
 class GraphiteMetrics(Metrics):
@@ -64,7 +68,12 @@ class GraphiteMetrics(Metrics):
         params.update(kw)
         url = self._build_render_url(params)
         resp = yield treq.get(url, persistent=False)
-        # TODO handle error responses
+
+        if is_error(resp):
+            raise MetricsBackendError(
+                "Got error response for request to graphite: "
+                "(%s) %s" % (resp.code, (yield resp.content())))
+
         returnValue(self._parse_response((yield resp.json())))
 
 
