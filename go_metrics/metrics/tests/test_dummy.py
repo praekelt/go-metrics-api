@@ -1,7 +1,6 @@
 from twisted.trial.unittest import TestCase
 
 from go_metrics.metrics.dummy import Fixtures, DummyMetrics, DummyBackend
-DummyBackend, DummyMetrics
 
 
 class TestFixtures(TestCase):
