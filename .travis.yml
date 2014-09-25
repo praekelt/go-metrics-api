@@ -11,8 +11,6 @@ install:
   - "pip install -r requirements.txt --use-wheel"
   - "pip install coveralls --use-wheel"
   - "pip install -e ."
-  # We need to install the verified fake as well so we can test it.
-  - "pip install -e ./verified-fake"
 script:
   - coverage run --source=go_metrics `which trial` go_metrics
 after_success:
