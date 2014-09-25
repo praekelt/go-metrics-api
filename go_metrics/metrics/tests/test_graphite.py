@@ -42,14 +42,47 @@ class TestGraphiteMetrics(TestCase):
         self.assertTrue(req.uri.startswith('/render/?'))
 
         self.assertEqual(req.args, {
+            'format': ['json'],
             'from': ['-48h'],
             'until': ['-24h'],
             'target': [
                 "alias(summarize(go.campaigns.owner-1.stores.a.b.last,"
-                " '1day', 'last', false), stores.a.b.last)",
+                " '1day', 'last', false), 'stores.a.b.last')",
 
                 "alias(summarize(go.campaigns.owner-1.stores.b.a.max, "
-                "'1day', 'max', false), stores.b.a.max)"],
+                "'1day', 'max', false), 'stores.b.a.max')"],
+        })
+
+    @inlineCallbacks
+    def test_get_one_request(self):
+        reqs = []
+
+        def handler(req):
+            reqs.append(req)
+            return '{}'
+
+        graphite = yield self.mk_graphite(handler)
+        backend = GraphiteBackend({'graphite_url': graphite.url})
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        yield metrics.get(**{
+            'm': ['stores.a.b.last'],
+            'from': '-48h',
+            'until': '-24h',
+            'interval': '1day'
+        })
+
+        [req] = reqs
+
+        self.assertTrue(req.uri.startswith('/render/?'))
+
+        self.assertEqual(req.args, {
+            'format': ['json'],
+            'from': ['-48h'],
+            'until': ['-24h'],
+            'target': [
+                "alias(summarize(go.campaigns.owner-1.stores.a.b.last,"
+                " '1day', 'last', false), 'stores.a.b.last')"],
         })
 
     @inlineCallbacks
@@ -132,11 +165,12 @@ class TestGraphiteMetrics(TestCase):
 
         [req] = reqs
         self.assertEqual(req.args, {
+            'format': ['json'],
             'from': ['-24h'],
             'until': ['-0s'],
             'target': [
                 "alias(summarize(go.campaigns.owner-1.stores.a.b.last,"
-                " '1hour', 'last', false), stores.a.b.last)"],
+                " '1hour', 'last', false), 'stores.a.b.last')"],
         })
 
     @inlineCallbacks

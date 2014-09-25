@@ -28,17 +28,23 @@ class GraphiteMetrics(Metrics):
         full_name = "go.campaigns.%s.%s" % (self.owner_id, name)
 
         return (
-            "alias(summarize(%s, '%s', '%s', %s), %s)" %
+            "alias(summarize(%s, '%s', '%s', %s), '%s')" %
             (full_name, interval, agg, align_to_from, name))
 
     def _build_render_url(self, params):
+        metrics = params['m']
+
+        if (isinstance(metrics, basestring)):
+            metrics = [metrics]
+
         targets = [
             self._build_metric_name(
                 name, params['interval'], params['align_to_from'])
-            for name in params['m']]
+            for name in metrics]
 
         url = urljoin(self.backend.config.graphite_url, 'render/')
         return "%s?%s" % (url, urlencode({
+            'format': 'json',
             'target': targets,
             'from': params['from'],
             'until': params['until'],
