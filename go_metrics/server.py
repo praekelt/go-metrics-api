@@ -1,4 +1,4 @@
-import urlparse
+from urlparse import parse_qs as _parse_qs
 
 from twisted.internet.defer import inlineCallbacks
 
@@ -13,7 +13,7 @@ from go_metrics.metrics.graphite import GraphiteBackend
 def parse_qs(qs):
     return dict(
         (k, v[0] if len(v) == 1 else v)
-        for (k, v) in urlparse.parse_qs(qs).iteritems())
+        for (k, v) in _parse_qs(qs).iteritems())
 
 
 class MetricsHandler(BaseHandler):
