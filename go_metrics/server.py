@@ -1,11 +1,44 @@
-from go_api.cyclone.handlers import ApiApplication
+from urlparse import parse_qs as _parse_qs
+
+from twisted.internet.defer import inlineCallbacks
 
 from confmodel import Config
+from confmodel.fields import ConfigDict
+
+from go_api.cyclone.handlers import ApiApplication, BaseHandler
+
+from go_metrics.metrics.graphite import GraphiteBackend
+
+
+def parse_qs(qs):
+    return dict(
+        (k, v[0] if len(v) == 1 else v)
+        for (k, v) in _parse_qs(qs).iteritems())
+
+
+class MetricsHandler(BaseHandler):
+    @inlineCallbacks
+    def get(self):
+        query = parse_qs(self.request.query)
+        result = yield self.model.get(**query)
+        self.write_object(result)
 
 
 class MetricsApiConfig(Config):
-    pass
+    backend = ConfigDict("Config for metrics backend", default={})
 
 
-class MetricssApi(ApiApplication):
-    pass
+class MetricsApi(ApiApplication):
+    config_required = True
+    backend_class = GraphiteBackend
+
+    @property
+    def models(self):
+        return (('/metrics/', MetricsHandler, self.get_metrics_model),)
+
+    def initialize(self, settings, config):
+        config = MetricsApiConfig(config)
+        self.backend = self.backend_class(config.backend)
+
+    def get_metrics_model(self, owner_id):
+        return self.backend.get_model(owner_id)
