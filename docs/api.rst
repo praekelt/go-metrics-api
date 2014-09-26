@@ -93,6 +93,9 @@ provides several ways of handling these null values:
   - *omit*: Returns the datapoints with ``null`` values omitted.
   - *keep*: Keeps the ``null`` values around.
 
+See :http:get:`/api/metrics/`\'s ``nulls`` query parameter to see how this
+handling can be configured when querying the api for metrics.
+
 
 .. _api-authentication:
 
