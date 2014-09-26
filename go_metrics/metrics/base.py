@@ -7,6 +7,12 @@ class MetricsBackendError(Exception):
     """
 
 
+class BadMetricsQueryError(Exception):
+    """
+    Raised when an error occurs because a bad query was given.
+    """
+
+
 class Metrics(object):
     """
     A model encapsulating how metric values are queried for a particular
