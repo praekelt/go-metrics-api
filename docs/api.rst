@@ -79,6 +79,24 @@ names take the form ``conversations.<conv_id>.<metric_name>.<agg_method>``:
 At the time of writing, conversation metrics are only fired by internal Vumi Go processes.
 
 
+.. _null-handling
+
+
+Null Handling
+~~~~~~~~~~~~~
+
+The value of each datapoint returned from graphite will often be ``null``. This
+case happens when there is no value relevant to that particular time. The api
+provides several ways of handling these null values:
+
+  - *zeroize*: Turns each ``null`` into a ``0``.
+  - *omit*: Returns the datapoints with ``null`` values omitted.
+  - *keep*: Keeps the ``null`` values around.
+
+See :http:get:`/api/metrics/`\'s ``nulls`` query parameter to see how this
+handling can be configured when querying the api for metrics.
+
+
 .. _api-authentication:
 
 API Authentication
@@ -138,8 +156,12 @@ API Methods
     should be summarized. Can be in any form accepted by graphite. See
     graphite's `functions`_ documentation. Defaults to ``1hour``.
 
-    :query align_to_from: align the time buckets into which metric values are
-    summarized against the given ``from`` time. Defaults to ``false``.
+    :query align_to_from: Align the time buckets into which metric values are
+    summarized against to the given ``from`` time. Defaults to ``false``.
+
+    :query nulls: The way null ``y`` values returned from graphite are handled.
+    Allowed values are ``zeroize``, ``omit`` and ``keep``
+    (see :ref:`null-handling`). Defaults to ``zeroize``.
 
     **Example request**:
 

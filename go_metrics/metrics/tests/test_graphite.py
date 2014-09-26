@@ -5,7 +5,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go_api.cyclone.helpers import MockHttpServer
 
-from go_metrics.metrics.base import MetricsBackendError
+from go_metrics.metrics.base import MetricsBackendError, BadMetricsQueryError
 from go_metrics.metrics.graphite import GraphiteMetrics, GraphiteBackend
 
 
@@ -108,12 +108,7 @@ class TestGraphiteMetrics(TestCase):
         backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
-        data = yield metrics.get(**{
-            'm': ['stores.a.b.last', 'stores.b.a.max'],
-            'from': '-48h',
-            'until': '-24h',
-            'interval': '1day'
-        })
+        data = yield metrics.get(m=['stores.a.b.last', 'stores.b.a.max'])
 
         self.assertEqual(data, {
             'stores.a.b.last': [{
@@ -192,6 +187,227 @@ class TestGraphiteMetrics(TestCase):
         except MetricsBackendError, e:
             self.assertEqual(str(e),
                 "Got error response for request to graphite: (400) :(")
+        else:
+            self.fail("Expected an error")
+
+    @inlineCallbacks
+    def test_get_null_handling_default(self):
+        def handler(req):
+            return json.dumps([{
+                'target': 'stores.a.b.last',
+                'datapoints': [
+                    [None, 2695],
+                    [5.0, 3695],
+                    [None, 4695],
+                    [None, 5695],
+                    [10.0, 6695],
+                    [None, 7695]]
+            }, {
+                'target': 'stores.b.a.max',
+                'datapoints': [
+                    [None, 2695],
+                    [12.0, 3695],
+                    [None, 4695],
+                    [14.0, 5695]]
+            }])
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(graphite_url=graphite.url)
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        self.assertEqual(
+            (yield metrics.get(
+                m=['stores.a.b.last', 'stores.b.a.max'])),
+            (yield metrics.get(
+                m=['stores.a.b.last', 'stores.b.a.max'],
+                nulls='zeroize')))
+
+    @inlineCallbacks
+    def test_get_null_handling_zeroize(self):
+        def handler(req):
+            return json.dumps([{
+                'target': 'stores.a.b.last',
+                'datapoints': [
+                    [None, 2695],
+                    [5.0, 3695],
+                    [None, 4695],
+                    [None, 5695],
+                    [10.0, 6695],
+                    [None, 7695]]
+            }, {
+                'target': 'stores.b.a.max',
+                'datapoints': [
+                    [None, 2695],
+                    [12.0, 3695],
+                    [None, 4695],
+                    [14.0, 5695]]
+            }])
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(graphite_url=graphite.url)
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        data = yield metrics.get(
+            m=['stores.a.b.last', 'stores.b.a.max'],
+            nulls='zeroize')
+
+        self.assertEqual(data, {
+            'stores.a.b.last': [{
+                'x': 2695000,
+                'y': 0.0
+            }, {
+                'x': 3695000,
+                'y': 5.0
+            }, {
+                'x': 4695000,
+                'y': 0.0
+            }, {
+                'x': 5695000,
+                'y': 0.0
+            }, {
+                'x': 6695000,
+                'y': 10.0
+            }, {
+                'x': 7695000,
+                'y': 0.0
+            }],
+            'stores.b.a.max': [{
+                'x': 2695000,
+                'y': 0.0
+            }, {
+                'x': 3695000,
+                'y': 12.0
+            }, {
+                'x': 4695000,
+                'y': 0.0
+            }, {
+                'x': 5695000,
+                'y': 14.0
+            }]
+        })
+
+    @inlineCallbacks
+    def test_get_null_handling_omit(self):
+        def handler(req):
+            return json.dumps([{
+                'target': 'stores.a.b.last',
+                'datapoints': [
+                    [None, 2695],
+                    [5.0, 3695],
+                    [None, 4695],
+                    [None, 5695],
+                    [10.0, 6695],
+                    [None, 7695]]
+            }, {
+                'target': 'stores.b.a.max',
+                'datapoints': [
+                    [None, 2695],
+                    [12.0, 3695],
+                    [None, 4695],
+                    [14.0, 5695]]
+            }])
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(graphite_url=graphite.url)
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        data = yield metrics.get(
+            m=['stores.a.b.last', 'stores.b.a.max'],
+            nulls='omit')
+
+        self.assertEqual(data, {
+            'stores.a.b.last': [{
+                'x': 3695000,
+                'y': 5.0
+            }, {
+                'x': 6695000,
+                'y': 10.0
+            }],
+            'stores.b.a.max': [{
+                'x': 3695000,
+                'y': 12.0
+            }, {
+                'x': 5695000,
+                'y': 14.0
+            }]
+        })
+
+    @inlineCallbacks
+    def test_get_null_handling_keep(self):
+        def handler(req):
+            return json.dumps([{
+                'target': 'stores.a.b.last',
+                'datapoints': [
+                    [None, 2695],
+                    [5.0, 3695],
+                    [None, 4695],
+                    [None, 5695],
+                    [10.0, 6695],
+                    [None, 7695]]
+            }, {
+                'target': 'stores.b.a.max',
+                'datapoints': [
+                    [None, 2695],
+                    [12.0, 3695],
+                    [None, 4695],
+                    [14.0, 5695]]
+            }])
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(graphite_url=graphite.url)
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        data = yield metrics.get(
+            m=['stores.a.b.last', 'stores.b.a.max'],
+            nulls='keep')
+
+        self.assertEqual(data, {
+            'stores.a.b.last': [{
+                'x': 2695000,
+                'y': None
+            }, {
+                'x': 3695000,
+                'y': 5.0
+            }, {
+                'x': 4695000,
+                'y': None
+            }, {
+                'x': 5695000,
+                'y': None
+            }, {
+                'x': 6695000,
+                'y': 10.0
+            }, {
+                'x': 7695000,
+                'y': None
+            }],
+            'stores.b.a.max': [{
+                'x': 2695000,
+                'y': None
+            }, {
+                'x': 3695000,
+                'y': 12.0
+            }, {
+                'x': 4695000,
+                'y': None
+            }, {
+                'x': 5695000,
+                'y': 14.0
+            }]
+        })
+
+    @inlineCallbacks
+    def test_get_null_handling_unrecognised(self):
+        graphite = yield self.mk_graphite()
+        backend = self.mk_backend(graphite_url=graphite.url)
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        try:
+            yield metrics.get(
+                m=['stores.a.b.last', 'stores.b.a.max'],
+                nulls='bad')
+        except BadMetricsQueryError, e:
+            self.assertEqual(str(e), "Unrecognised null parser 'bad'")
         else:
             self.fail("Expected an error")
 

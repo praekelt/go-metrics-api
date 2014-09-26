@@ -11,7 +11,8 @@ import treq
 
 from confmodel.fields import ConfigText, ConfigBool
 
-from go_metrics.metrics.base import Metrics, MetricsBackend, MetricsBackendError
+from go_metrics.metrics.base import (
+    Metrics, MetricsBackend, MetricsBackendError, BadMetricsQueryError)
 
 
 def agg_from_name(name):
@@ -20,6 +21,24 @@ def agg_from_name(name):
 
 def is_error(resp):
     return 400 <= resp.code <= 599
+
+
+def omit_nulls(datapoints):
+    return [d for d in datapoints if d['y'] is not None]
+
+
+def zeroize_nulls(datapoints):
+    return [{
+        'x': d['x'],
+        'y': 0.0 if d['y'] is None else d['y']
+    } for d in datapoints]
+
+
+null_parsers = {
+    'keep': lambda x: x,
+    'omit': omit_nulls,
+    'zeroize': zeroize_nulls,
+}
 
 
 class GraphiteMetrics(Metrics):
@@ -51,15 +70,14 @@ class GraphiteMetrics(Metrics):
         }, True))
 
     def _parse_datapoints(self, datapoints):
-        # TODO filter nulls
         return [{
             'x': x * 1000,
             'y': y,
         } for (y, x) in datapoints]
 
-    def _parse_response(self, data):
+    def _parse_response(self, data, null_parser):
         return dict(
-            (d['target'], self._parse_datapoints(d['datapoints']))
+            (d['target'], null_parser(self._parse_datapoints(d['datapoints'])))
             for d in data)
 
     @inlineCallbacks
@@ -68,10 +86,16 @@ class GraphiteMetrics(Metrics):
             'm': [],
             'from': '-24h',
             'until': '-0s',
+            'nulls': 'zeroize',
             'interval': '1hour',
             'align_to_from': 'false',
         }
         params.update(kw)
+
+        if params['nulls'] not in null_parsers:
+            raise BadMetricsQueryError(
+                "Unrecognised null parser '%s'" % (params['nulls'],))
+
         url = self._build_render_url(params)
         resp = yield treq.get(url, persistent=self.backend.config.persistent)
 
@@ -80,7 +104,8 @@ class GraphiteMetrics(Metrics):
                 "Got error response for request to graphite: "
                 "(%s) %s" % (resp.code, (yield resp.content())))
 
-        returnValue(self._parse_response((yield resp.json())))
+        null_parser = null_parsers[params['nulls']]
+        returnValue(self._parse_response((yield resp.json()), null_parser))
 
 
 class GraphiteBackendConfig(MetricsBackend.config_class):
