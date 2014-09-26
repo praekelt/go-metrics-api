@@ -1,12 +1,13 @@
 from urlparse import parse_qs as _parse_qs
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import maybeDeferred
 
 from confmodel import Config
 from confmodel.fields import ConfigDict
 
 from go_api.cyclone.handlers import ApiApplication, BaseHandler
 
+from go_metrics.metrics.base import MetricsBackendError, BadMetricsQueryError
 from go_metrics.metrics.graphite import GraphiteBackend
 
 
@@ -17,11 +18,14 @@ def parse_qs(qs):
 
 
 class MetricsHandler(BaseHandler):
-    @inlineCallbacks
     def get(self):
         query = parse_qs(self.request.query)
-        result = yield self.model.get(**query)
-        self.write_object(result)
+        d = maybeDeferred(self.model.get, **query)
+        d.addCallback(self.write_object)
+        d.addErrback(self.catch_err, 400, BadMetricsQueryError)
+        d.addErrback(self.catch_err, 500, MetricsBackendError)
+        d.addErrback(self.raise_err, 500, "Failed to retrieve metrics.")
+        return d
 
 
 class MetricsApiConfig(Config):
