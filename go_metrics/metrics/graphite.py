@@ -9,7 +9,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 import treq
 
-from confmodel.fields import ConfigText
+from confmodel.fields import ConfigText, ConfigBool
 
 from go_metrics.metrics.base import Metrics, MetricsBackend, MetricsBackendError
 
@@ -73,7 +73,7 @@ class GraphiteMetrics(Metrics):
         }
         params.update(kw)
         url = self._build_render_url(params)
-        resp = yield treq.get(url, persistent=False)
+        resp = yield treq.get(url, persistent=self.backend.config.persistent)
 
         if is_error(resp):
             raise MetricsBackendError(
@@ -85,8 +85,13 @@ class GraphiteMetrics(Metrics):
 
 class GraphiteBackendConfig(MetricsBackend.config_class):
     graphite_url = ConfigText(
-        "Url for graphite web app to query",
+        "Url for the graphite web server to query",
         default='http://127.0.0.1:8080')
+
+    persistent = ConfigBool(
+        "Flag given to treq telling it whether to maintain a single connection ",
+        "for the requests made to graphite's web app",
+        default=True)
 
 
 class GraphiteBackend(MetricsBackend):
