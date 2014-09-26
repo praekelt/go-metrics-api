@@ -12,7 +12,7 @@ import treq
 from confmodel.fields import ConfigText
 
 from go_metrics.metrics.base import (
-    Metrics, MetricsBackend, MetricsBackendError)
+    Metrics, MetricsBackend, MetricsBackendError, BadMetricsQueryError)
 
 
 def agg_from_name(name):
@@ -93,8 +93,8 @@ class GraphiteMetrics(Metrics):
         params.update(kw)
 
         if params['nulls'] not in null_parsers:
-            # TODO
-            pass
+            raise BadMetricsQueryError(
+                "Unrecognised null parser '%s'" % (params['nulls'],))
 
         url = self._build_render_url(params)
         resp = yield treq.get(url, persistent=False)

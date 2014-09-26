@@ -5,7 +5,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 from go_api.cyclone.helpers import MockHttpServer
 
-from go_metrics.metrics.base import MetricsBackendError
+from go_metrics.metrics.base import MetricsBackendError, BadMetricsQueryError
 from go_metrics.metrics.graphite import GraphiteMetrics, GraphiteBackend
 
 
@@ -391,6 +391,21 @@ class TestGraphiteMetrics(TestCase):
                 'y': 14.0
             }]
         })
+
+    @inlineCallbacks
+    def test_get_null_handling_unrecognised(self):
+        graphite = yield self.mk_graphite()
+        backend = GraphiteBackend({'graphite_url': graphite.url})
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        try:
+            yield metrics.get(
+                m=['stores.a.b.last', 'stores.b.a.max'],
+                nulls='bad')
+        except BadMetricsQueryError, e:
+            self.assertEqual(str(e), "Unrecognised null parser 'bad'")
+        else:
+            self.fail("Expected an error")
 
 
 class TestGraphiteBackend(TestCase):
