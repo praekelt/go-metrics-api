@@ -212,7 +212,7 @@ class TestGraphiteMetrics(TestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         self.assertEqual(
@@ -244,7 +244,7 @@ class TestGraphiteMetrics(TestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(
@@ -308,7 +308,7 @@ class TestGraphiteMetrics(TestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(
@@ -354,7 +354,7 @@ class TestGraphiteMetrics(TestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(
@@ -399,7 +399,7 @@ class TestGraphiteMetrics(TestCase):
     @inlineCallbacks
     def test_get_null_handling_unrecognised(self):
         graphite = yield self.mk_graphite()
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         try:
