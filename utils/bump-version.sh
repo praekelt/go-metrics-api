@@ -24,6 +24,7 @@ SHORT_VER=`echo "${VER}" | sed -e "s/\.[^.]*$//"`
 setup_sed="s/\(version[ ]*=[ ]*[\"']\)\(.*\)\([\"'].*\)/\1${VER}\3/"
 init_sed="s/^\(__version__[ ]*=[ ]*[\"']\)\(.*\)\([\"'].*\)/\1${VER}\3/"
 
+inplace_sed "${setup_sed}" setup.py 
 inplace_sed "${init_sed}" go_metrics/__init__.py
 inplace_sed "s/^\(release[ ]*=[ ]*[\"']\)\(.*\)\([\"'].*\)/\1${VER}\3/" docs/conf.py
 inplace_sed "s/^\(version[ ]*=[ ]*[\"']\)\(.*\)\([\"'].*\)/\1${SHORT_VER}\3/" docs/conf.py
