@@ -43,7 +43,7 @@ for the error.
     }
 
 
-.. _metric-types
+.. _metric-types:
 
 Metric Types
 ------------
@@ -77,6 +77,24 @@ names take the form ``conversations.<conv_id>.<metric_name>.<agg_method>``:
       ``last``).
 
 At the time of writing, conversation metrics are only fired by internal Vumi Go processes.
+
+
+.. _null-handling:
+
+
+Null Handling
+~~~~~~~~~~~~~
+
+The value of each datapoint returned from graphite will often be ``null``. This
+case happens when there is no value relevant to that particular time. The api
+provides several ways of handling these null values:
+
+  - *zeroize*: Turns each ``null`` into a ``0``.
+  - *omit*: Returns the datapoints with ``null`` values omitted.
+  - *keep*: Keeps the ``null`` values around.
+
+See :http:get:`/api/metrics/`\'s ``nulls`` query parameter to see how this
+handling can be configured when querying the api for metrics.
 
 
 .. _api-authentication:
@@ -123,23 +141,33 @@ API Methods
     Retrieves the timestamp-value pairs of the metrics specified as query
     parameters.
 
-    :query m: Name of a metric to be retrieved. Multiple may be specified. See
-    :ref:`metric-types` for an overview of the metric name formats.
+    :query m:
+        Name of a metric to be retrieved. Multiple may be specified. See
+        :ref:`metric-types` for an overview of the metric name formats.
 
-    :query from: The beginning time period to retrieve values from. Can be in
-    any form accepted by graphite. See graphite's `from and until`_
-    documentation. Defaults to 24 hours ago.
+    :query from:
+        The beginning time period to retrieve values from. Can be in any form
+        accepted by graphite. See graphite's `from and until`_ documentation.
+        Defaults to 24 hours ago.
 
-    :query until: The ending time period to retrieve values until. Can be in any
-    form accepted by graphite. See graphite's `from and until`_ documentation.
-    Defaults to the current time.
+    :query until:
+        The ending time period to retrieve values until. Can be in any
+        form accepted by graphite. See graphite's `from and until`_ documentation.
+        Defaults to the current time.
 
-    :query interval: The size of the time buckets into which metric values
-    should be summarized. Can be in any form accepted by graphite. See
-    graphite's `functions`_ documentation. Defaults to ``1hour``.
+    :query interval:
+        The size of the time buckets into which metric values
+        should be summarized. Can be in any form accepted by graphite. See
+        graphite's `functions`_ documentation. Defaults to ``1hour``.
 
-    :query align_to_from: align the time buckets into which metric values are
-    summarized against the given ``from`` time. Defaults to ``false``.
+    :query align_to_from:
+        Align the time buckets into which metric values are
+        summarized against to the given ``from`` time. Defaults to ``false``.
+
+    :query nulls:
+        The way null ``y`` values returned from graphite are handled.
+        Allowed values are ``zeroize``, ``omit`` and ``keep``
+        (see :ref:`null-handling`). Defaults to ``zeroize``.
 
     **Example request**:
 
