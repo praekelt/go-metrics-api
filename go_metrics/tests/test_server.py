@@ -3,7 +3,7 @@ Tests for the metrics API's server.
 """
 import yaml
 
-from twisted.internet.defer import succeed, inlineCallbacks
+from twisted.internet.defer import succeed, inlineCallbacks, maybeDeferred
 from twisted.trial.unittest import TestCase
 
 from confmodel.fields import ConfigText
@@ -11,6 +11,7 @@ from confmodel.fields import ConfigText
 from go_api.cyclone.helpers import AppHelper
 
 from go_metrics.server import MetricsApi
+from go_metrics.metrics.base import MetricsBackendError, BadMetricsQueryError
 from go_metrics.metrics.dummy import DummyBackend
 
 
@@ -70,3 +71,60 @@ class TestMetricsApi(TestCase):
         get = AppHelper(app).get
         resp = yield get('/metrics/', params={'foo': 'bar'})
         self.assertEqual((yield resp.json()), {'baz': 'quux'})
+
+    @inlineCallbacks
+    def test_metrics_get_query_error(self):
+        app = DummyMetricsApi(self.mk_config())
+
+        def fail():
+            raise BadMetricsQueryError(":(")
+
+        app.backend.fixtures.add(foo='bar', result=maybeDeferred(fail))
+
+        get = AppHelper(app).get
+        resp = yield get('/metrics/', params={'foo': 'bar'})
+
+        self.assertEqual((yield resp.json()), {
+            'status_code': 400,
+            'reason': ':(',
+        })
+
+    @inlineCallbacks
+    def test_metrics_get_backend_error(self):
+        app = DummyMetricsApi(self.mk_config())
+
+        def fail():
+            raise MetricsBackendError(":(")
+
+        app.backend.fixtures.add(foo='bar', result=maybeDeferred(fail))
+
+        get = AppHelper(app).get
+        resp = yield get('/metrics/', params={'foo': 'bar'})
+
+        self.assertEqual((yield resp.json()), {
+            'status_code': 500,
+            'reason': ':(',
+        })
+
+    @inlineCallbacks
+    def test_metrics_get_uncaught_error(self):
+        app = DummyMetricsApi(self.mk_config())
+
+        class DummyError(Exception):
+            pass
+
+        def fail():
+            raise DummyError(":(")
+
+        app.backend.fixtures.add(foo='bar', result=maybeDeferred(fail))
+
+        get = AppHelper(app).get
+        resp = yield get('/metrics/', params={'foo': 'bar'})
+
+        self.assertEqual((yield resp.json()), {
+            'status_code': 500,
+            'reason': 'Failed to retrieve metrics.',
+        })
+
+        [f] = self.flushLoggedErrors(DummyError)
+        self.assertEqual(str(f.value), ":(")

@@ -18,6 +18,10 @@ class TestGraphiteMetrics(TestCase):
         self.addCleanup(graphite.stop)
         returnValue(graphite)
 
+    def mk_backend(self, **kw):
+        kw.setdefault('persistent', False)
+        return GraphiteBackend(kw)
+
     @inlineCallbacks
     def test_get_request(self):
         reqs = []
@@ -27,7 +31,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -62,7 +66,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -101,7 +105,7 @@ class TestGraphiteMetrics(TestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(m=['stores.a.b.last', 'stores.b.a.max'])
@@ -132,7 +136,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -153,7 +157,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(m=['stores.a.b.last'])
@@ -175,7 +179,7 @@ class TestGraphiteMetrics(TestCase):
             return ':('
 
         graphite = yield self.mk_graphite(handler)
-        backend = GraphiteBackend({'graphite_url': graphite.url})
+        backend = self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         try:
