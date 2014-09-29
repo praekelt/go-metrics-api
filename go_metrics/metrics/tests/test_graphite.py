@@ -440,7 +440,6 @@ class TestGraphiteMetrics(TestCase):
             req.getHeader('Authorization'),
             'Basic %s' % (b64encode('root:toor')))
 
-
     @inlineCallbacks
     def test_get_no_auth(self):
         reqs = []
