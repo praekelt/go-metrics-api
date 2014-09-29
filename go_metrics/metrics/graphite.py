@@ -114,8 +114,8 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
         default='http://127.0.0.1:8080')
 
     persistent = ConfigBool(
-        "Flag given to treq telling it whether to maintain a single connection ",
-        "for the requests made to graphite's web app",
+        ("Flag given to treq telling it whether to maintain a single connection "
+         "for the requests made to graphite's web app"),
         default=True)
 
 
