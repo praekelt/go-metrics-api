@@ -9,7 +9,7 @@ Contents
 - :ref:`api-authentication`
 - :ref:`api-methods`
 
-    - :http:get:`/api/metrics`
+    - :http:get:`/api/metrics/`
 
 .. _response-format-overview:
 
