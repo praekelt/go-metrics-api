@@ -1,4 +1,5 @@
 import json
+from base64 import b64encode
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -410,6 +411,58 @@ class TestGraphiteMetrics(TestCase):
             self.assertEqual(str(e), "Unrecognised null parser 'bad'")
         else:
             self.fail("Expected an error")
+
+    @inlineCallbacks
+    def test_get_auth(self):
+        reqs = []
+
+        def handler(req):
+            reqs.append(req)
+            return '{}'
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(
+            graphite_url=graphite.url,
+            username="root",
+            password="toor")
+
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        yield metrics.get(**{
+            'm': ['stores.a.b.last', 'stores.b.a.max'],
+            'from': '-48h',
+            'until': '-24h',
+            'interval': '1day'
+        })
+
+        [req] = reqs
+        self.assertEqual(
+            req.getHeader('Authorization'),
+            'Basic %s' % (b64encode('root:toor')))
+
+
+    @inlineCallbacks
+    def test_get_no_auth(self):
+        reqs = []
+
+        def handler(req):
+            reqs.append(req)
+            return '{}'
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(graphite_url=graphite.url)
+
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        yield metrics.get(**{
+            'm': ['stores.a.b.last', 'stores.b.a.max'],
+            'from': '-48h',
+            'until': '-24h',
+            'interval': '1day'
+        })
+
+        [req] = reqs
+        self.assertEqual(req.getHeader('Authorization'), None)
 
 
 class TestGraphiteBackend(TestCase):
