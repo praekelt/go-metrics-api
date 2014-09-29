@@ -4,10 +4,13 @@ from base64 import b64encode
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from confmodel.errors import ConfigError
+
 from go_api.cyclone.helpers import MockHttpServer
 
 from go_metrics.metrics.base import MetricsBackendError, BadMetricsQueryError
-from go_metrics.metrics.graphite import GraphiteMetrics, GraphiteBackend
+from go_metrics.metrics.graphite import (
+    GraphiteMetrics, GraphiteBackend, GraphiteBackendConfig)
 
 
 class TestGraphiteMetrics(TestCase):
@@ -464,5 +467,14 @@ class TestGraphiteMetrics(TestCase):
         self.assertEqual(req.getHeader('Authorization'), None)
 
 
-class TestGraphiteBackend(TestCase):
-    pass
+class TestGraphiteBackendConfig(TestCase):
+    def test_auth_fields(self):
+        GraphiteBackendConfig({})
+        GraphiteBackendConfig({
+            'username': 'foo',
+            'password': 'bar',
+        })
+        self.assertRaises(
+            ConfigError, GraphiteBackendConfig, {'username': 'foo'})
+        self.assertRaises(
+            ConfigError, GraphiteBackendConfig, {'password': 'bar'})

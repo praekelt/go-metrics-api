@@ -9,6 +9,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 import treq
 
+from confmodel.errors import ConfigError
 from confmodel.fields import ConfigText, ConfigBool
 
 from go_metrics.metrics.base import (
@@ -136,6 +137,15 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
     password = ConfigText(
         "Basic auth password for authenticating requests to graphite",
         required=False)
+
+    def post_validate(self):
+        auth = (self.username, self.password)
+        exists = [x is not None for x in auth]
+
+        if any(exists) and not all(exists):
+            raise ConfigError(
+                "Either both a username and password need to be given or "
+                "neither for graphite backend config")
 
 
 class GraphiteBackend(MetricsBackend):
