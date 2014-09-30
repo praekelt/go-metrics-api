@@ -1,12 +1,16 @@
 import json
+from base64 import b64encode
 
 from twisted.trial.unittest import TestCase
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from confmodel.errors import ConfigError
+
 from go_api.cyclone.helpers import MockHttpServer
 
 from go_metrics.metrics.base import MetricsBackendError, BadMetricsQueryError
-from go_metrics.metrics.graphite import GraphiteMetrics, GraphiteBackend
+from go_metrics.metrics.graphite import (
+    GraphiteMetrics, GraphiteBackend, GraphiteBackendConfig)
 
 
 class TestGraphiteMetrics(TestCase):
@@ -411,6 +415,66 @@ class TestGraphiteMetrics(TestCase):
         else:
             self.fail("Expected an error")
 
+    @inlineCallbacks
+    def test_get_auth(self):
+        reqs = []
 
-class TestGraphiteBackend(TestCase):
-    pass
+        def handler(req):
+            reqs.append(req)
+            return '{}'
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(
+            graphite_url=graphite.url,
+            username="root",
+            password="toor")
+
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        yield metrics.get(**{
+            'm': ['stores.a.b.last', 'stores.b.a.max'],
+            'from': '-48h',
+            'until': '-24h',
+            'interval': '1day'
+        })
+
+        [req] = reqs
+        self.assertEqual(
+            req.getHeader('Authorization'),
+            'Basic %s' % (b64encode('root:toor')))
+
+    @inlineCallbacks
+    def test_get_no_auth(self):
+        reqs = []
+
+        def handler(req):
+            reqs.append(req)
+            return '{}'
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(graphite_url=graphite.url)
+
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        yield metrics.get(**{
+            'm': ['stores.a.b.last', 'stores.b.a.max'],
+            'from': '-48h',
+            'until': '-24h',
+            'interval': '1day'
+        })
+
+        [req] = reqs
+        self.assertEqual(req.getHeader('Authorization'), None)
+
+
+class TestGraphiteBackendConfig(TestCase):
+    def test_auth_fields(self):
+        GraphiteBackendConfig({})
+        GraphiteBackendConfig({
+            'username': 'foo',
+            'password': 'bar',
+        })
+        self.assertRaises(
+            ConfigError, GraphiteBackendConfig, {'username': 'foo'})
+        self.assertRaises(
+            ConfigError, GraphiteBackendConfig, {'password': 'bar'})
