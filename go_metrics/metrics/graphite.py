@@ -9,6 +9,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 
 import treq
 
+from confmodel.errors import ConfigError
 from confmodel.fields import ConfigText, ConfigBool
 
 from go_metrics.metrics.base import (
@@ -80,6 +81,14 @@ class GraphiteMetrics(Metrics):
             (d['target'], null_parser(self._parse_datapoints(d['datapoints'])))
             for d in data)
 
+    def _get_auth(self):
+        config = self.backend.config
+
+        if config.username is not None and config.password is not None:
+            return (config.username, config.password)
+        else:
+            return None
+
     @inlineCallbacks
     def get(self, **kw):
         params = {
@@ -97,7 +106,10 @@ class GraphiteMetrics(Metrics):
                 "Unrecognised null parser '%s'" % (params['nulls'],))
 
         url = self._build_render_url(params)
-        resp = yield treq.get(url, persistent=self.backend.config.persistent)
+        resp = yield treq.get(
+            url,
+            auth=self._get_auth(),
+            persistent=self.backend.config.persistent)
 
         if is_error(resp):
             raise MetricsBackendError(
@@ -114,9 +126,26 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
         default='http://127.0.0.1:8080')
 
     persistent = ConfigBool(
-        ("Flag given to treq telling it whether to maintain a single connection "
-         "for the requests made to graphite's web app"),
+        ("Flag given to treq telling it whether to maintain a single "
+         "connection for the requests made to graphite's web app"),
         default=True)
+
+    username = ConfigText(
+        "Basic auth username for authenticating requests to graphite",
+        required=False)
+
+    password = ConfigText(
+        "Basic auth password for authenticating requests to graphite",
+        required=False)
+
+    def post_validate(self):
+        auth = (self.username, self.password)
+        exists = [x is not None for x in auth]
+
+        if any(exists) and not all(exists):
+            raise ConfigError(
+                "Either both a username and password need to be given or "
+                "neither for graphite backend config")
 
 
 class GraphiteBackend(MetricsBackend):
