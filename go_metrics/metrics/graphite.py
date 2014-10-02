@@ -113,8 +113,7 @@ class GraphiteMetrics(Metrics):
 
         if is_error(resp):
             raise MetricsBackendError(
-                "Got error response for request to graphite: "
-                "(%s) %s" % (resp.code, (yield resp.content())))
+                "Got error response interacting with metrics backend")
 
         null_parser = null_parsers[params['nulls']]
         returnValue(self._parse_response((yield resp.json()), null_parser))
