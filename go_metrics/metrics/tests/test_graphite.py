@@ -190,7 +190,7 @@ class TestGraphiteMetrics(TestCase):
             yield metrics.get()
         except MetricsBackendError, e:
             self.assertEqual(str(e),
-                "Got error response for request to graphite: (400) :(")
+                "Got error response interacting with metrics backend")
         else:
             self.fail("Expected an error")
 
