@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="go-metrics-api",
-    version="0.1.2",
+    version="0.1.3a",
     url='http://github.com/praekelt/go-metrics-api',
     license='BSD',
     description="An API for querying vumi-go metrics",
