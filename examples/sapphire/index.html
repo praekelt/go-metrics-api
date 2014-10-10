@@ -130,10 +130,7 @@ function updateWidget(widget, done) {
         return;
       }
 
-      // We should be able to use `res.body`
-      // https://github.com/praekelt/go-api-toolkit/issues/23
-      updateMetrics(widget, JSON.parse(res.text));
-
+      updateMetrics(widget, res.body);
       done();
     });
 }
