@@ -1,47 +1,47 @@
 // Add some initial configuration data. Each widget's `metric` or `metrics`
-// will contain data once ajax the corresponding ajax request has been made.
+// will contain data once the corresponding ajax request has been made.
 var data = {
   url: 'http://go.vumi.org/api/v1/go/metrics/',
   token: 'token12345',
   step: 10000,
   widgets: {
-    all: {
-    from: '-1d',
-    interval: '1h',
-    nulls: 'omit',
-    title: 'A, B and C today',
-    metrics: [{
-      title: 'A',
+    a: {
+      title: 'A (last 30 days)',
       key: 'stores.store1.a.last',
-    }, {
-      title: 'B',
-      key: 'stores.store1.b.last'
-    }, {
-      title: 'C',
-      key: 'stores.store1.c.last'
-    }],
-  },
-  a: {
-    title: 'A (last 30 days)',
-    key: 'stores.store1.a.last',
-    from: '-30d',
-    interval: '1d',
-    nulls: 'omit'
-  },
-  b: {
-    title: 'B (last 30 days)',
-    key: 'stores.store1.b.last',
-    from: '-30d',
-    interval: '1d',
-    nulls: 'omit'
-  },
-  c: {
-    title: 'C (last 30 days)',
-    key: 'stores.store1.c.last',
-    from: '-30d',
-    interval: '1d',
-    nulls: 'omit'
-  }
+      from: '-30d',
+      interval: '1d',
+      nulls: 'omit'
+    },
+    b: {
+      title: 'B (last 30 days)',
+      key: 'stores.store1.b.last',
+      from: '-30d',
+      interval: '1d',
+      nulls: 'omit'
+    },
+    c: {
+      title: 'C (last 30 days)',
+      key: 'stores.store1.c.last',
+      from: '-30d',
+      interval: '1d',
+      nulls: 'omit'
+    },
+    all: {
+      from: '-1d',
+      interval: '1h',
+      nulls: 'omit',
+      title: 'A, B and C today',
+      metrics: [{
+        title: 'A',
+        key: 'stores.store1.a.last',
+      }, {
+        title: 'B',
+        key: 'stores.store1.b.last'
+      }, {
+        title: 'C',
+        key: 'stores.store1.c.last'
+      }],
+    }
   }
 };
 
