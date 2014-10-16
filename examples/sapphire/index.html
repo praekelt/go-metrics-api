@@ -5,159 +5,24 @@
     <link
     rel="stylesheet"
     href="https://rawgit.com/praekelt/sapphire/develop/build/sapphire.css">
-    <style type="text/css">
-body {
-  background: #f2f2f2;
-}
+
+    <link rel="stylesheet" href="example.css">
     </style>
   </head>
   <body>
+    <!-- we need the 'sapphire' class here for sapphire styling to be applied -->
+
+    <div class="sapphire">
+      <div id="a"></div>
+      <div id="b"></div>
+      <div id="c"></div>
+      <div id="all"></div>
+    </div>
+
     <script src="http://d3js.org/d3.v3.min.js"></script>
     <script src="https://rawgit.com/justinvdm/strain/master/strain.js"></script>
     <script src="https://rawgit.com/praekelt/sapphire/develop/build/sapphire.js"></script>
     <script src="https://rawgit.com/visionmedia/superagent/master/superagent.js"></script>
-    <script>
-var data = {
-  url: 'http://go.vumi.org/api/v1/go/metrics/',
-  token: 'token12345',
-  step: 10000,
-  widgets: [{
-    from: '-1d',
-    interval: '1h',
-    type: 'lines',
-    col: 0,
-    row: 0,
-    colspan: 6,
-    title: 'A, B and C today',
-    metrics: [{
-      title: 'A',
-      key: 'stores.store1.a.last'
-    }, {
-      title: 'B',
-      key: 'stores.store1.b.last',
-    }, {
-      title: 'C',
-      key: 'stores.store1.c.last',
-    }],
-  }, {
-    title: 'A (last 30 days)',
-    key: 'stores.store1.b.last',
-    from: '-30d',
-    interval: '1d',
-    type: 'last',
-    row: 0,
-    col: 6
-  }, {
-    title: 'B (last 30 days)',
-    key: 'stores.store1.c.last',
-    from: '-30d',
-    interval: '1d',
-    type: 'last',
-    row: 2,
-    col: 6
-  }, {
-    title: 'C (last 30 days)',
-    from: '-30d',
-    interval: '1d',
-    key: 'stores.store1.c.last',
-    type: 'last',
-    row: 4,
-    col: 6
-  }]
-};
-
-
-var dashboard = sapphire.dashboard()
-  .numcols(10);
-
-
-// Create the dashboard element and bind it to the dashboard data.
-var el = d3.select('body').append('div')
-  .attr('class', 'sapphire')
-  .append('div')
-  .datum(data);
-
-
-// Update the dashboard on page load, then every `data.step` milliseconds.
-update();
-setInterval(update, data.step);
-
-
-// Updates each widget's metrics one by one, then draws the dashboard.
-function update() {
-  var i = -1
-
-  function next() {
-    if (++i < data.widgets.length) updateWidget(data.widgets[i], next);
-    else dashboard(el);
-  }
-
-  next();
-}
-
-
-// Update a single widget's values by making an ajax request, then invokes a
-// callback when done.
-//
-// 1. Create the request object as a json request to the configured url, with
-// the from and interval parameters relevant to the widget and the auth token
-// associated with the vumi-go account.
-//
-// 2. Add each of the widget's metrics to the query
-//
-// 3. Make the request
-//
-// 4. Update the widget's metrics with the response
-//
-// 5. Invoke the `done` callback so the next metric request or draw can happen
-function updateWidget(widget, done) {
-  var req = superagent
-    .get(data.url)
-    .set('Authorization', ['Bearer', data.token].join(' '))
-    .type('json')
-    .query({
-      from: widget.from,
-      interval: widget.interval,
-    });
-
-  metrics(widget)
-    .forEach(function(d) { req.query({m: d.key}); });
-
-  req
-    .end(function(res) {
-      if (!res.ok) {
-        console.error(res.text);
-        return;
-      }
-
-      updateMetrics(widget, res.body);
-      done();
-    });
-}
-
-
-// Updates a widget's metric values using the given api response data.
-function updateMetrics(widget, data) {
-  metrics(widget)
-    .forEach(function(d) {
-      d.values = data[d.key];
-    })
-}
-
-
-// Accesses a widget's metric data.
-//
-// `last` widgets only have a single metric. This function simplifies things
-// by allowing us to treat all widgets as having multiple widgets.
-//
-// Note that the `last` widget could have also been configured to handle this
-// distinction. Using this approach instead just means less widget
-// configuration is needed.
-function metrics(widget) {
-  return widget.metrics
-    ? widget.metrics
-    : [widget]
-}
-    </script>
+    <script src="example.js"></script>
   </body>
 </html>
