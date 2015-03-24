@@ -2,6 +2,7 @@
 Graphite backend for the metrics api.
 """
 
+from datetime import datetime
 from urllib import urlencode
 from urlparse import urljoin
 
@@ -10,10 +11,12 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 import treq
 
 from confmodel.errors import ConfigError
-from confmodel.fields import ConfigText, ConfigBool
+from confmodel.fields import ConfigText, ConfigBool, ConfigInt
 
 from go_metrics.metrics.base import (
     Metrics, MetricsBackend, MetricsBackendError, BadMetricsQueryError)
+from go_metrics.metrics.graphite_time_parser import (
+    interval_to_seconds, parse_time)
 
 
 def agg_from_name(name):
@@ -89,6 +92,18 @@ class GraphiteMetrics(Metrics):
         else:
             return None
 
+    def _predict_data_size(self, start, end, interval):
+        """
+        Use the start and end times and interval size to predict the number of
+        data points being requested.
+        """
+        now = datetime.utcnow()
+        start_dt = parse_time(start, now)
+        end_dt = parse_time(end, now)
+        interval_secs = interval_to_seconds(interval)
+        period = end_dt - start_dt
+        return (period.seconds + 86400 * period.days) / interval_secs
+
     @inlineCallbacks
     def get(self, **kw):
         params = {
@@ -100,6 +115,14 @@ class GraphiteMetrics(Metrics):
             'align_to_from': 'false',
         }
         params.update(kw)
+
+        predicted_size = self._predict_data_size(
+            params['from'], params['until'], params['interval'])
+        max_response_size = self.backend.config.max_response_size
+        if predicted_size > max_response_size:
+            raise BadMetricsQueryError(
+                "%s data points requested, maximum allowed is %s" % (
+                    predicted_size, max_response_size))
 
         if params['nulls'] not in null_parsers:
             raise BadMetricsQueryError(
@@ -126,16 +149,22 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
 
     persistent = ConfigBool(
         ("Flag given to treq telling it whether to maintain a single "
-         "connection for the requests made to graphite's web app"),
+         "connection for the requests made to graphite's web app."),
         default=True)
 
     username = ConfigText(
-        "Basic auth username for authenticating requests to graphite",
+        "Basic auth username for authenticating requests to graphite.",
         required=False)
 
     password = ConfigText(
-        "Basic auth password for authenticating requests to graphite",
+        "Basic auth password for authenticating requests to graphite.",
         required=False)
+
+    max_response_size = ConfigInt(
+        ("Maximum number of data points to return. If a request specifies a "
+         "time range and interval that contains more data than this, it is "
+         "rejected."),
+        default=10000)
 
     def post_validate(self):
         auth = (self.username, self.password)
