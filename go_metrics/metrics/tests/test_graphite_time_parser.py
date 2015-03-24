@@ -17,6 +17,14 @@ class TestGraphiteTimeParser(TestCase):
         """
         return self.assertRaises(TimeParserValueError, *args, **kw)
 
+    def assert_interval_to_seconds(self, expected, *inputs):
+        """
+        Convenience wrapper for testing multiple equivalent interval strings at
+        once.
+        """
+        for value in inputs:
+            self.assertEqual(interval_to_seconds(value), expected)
+
     def test_interval_to_seconds_with_invalid_value(self):
         """
         A TimeParserValueError is raised for various invalid values.
@@ -32,106 +40,85 @@ class TestGraphiteTimeParser(TestCase):
         """
         With a suffix of "s" or "seconds", the interval is parsed in seconds.
         """
-        self.assertEqual(interval_to_seconds("0s"), 0)
-        self.assertEqual(interval_to_seconds("0seconds"), 0)
-        self.assertEqual(interval_to_seconds("1s"), 1)
-        self.assertEqual(interval_to_seconds("1seconds"), 1)
-        self.assertEqual(interval_to_seconds("60s"), 60)
-        self.assertEqual(interval_to_seconds("60seconds"), 60)
-        self.assertEqual(interval_to_seconds("1234567s"), 1234567)
-        self.assertEqual(interval_to_seconds("1234567seconds"), 1234567)
-        self.assertEqual(interval_to_seconds("012s"), 12)
-        self.assertEqual(interval_to_seconds("012seconds"), 12)
+        self.assert_interval_to_seconds(0, "0s", "0second", "0seconds")
+        self.assert_interval_to_seconds(1, "1s", "1second", "1seconds")
+        self.assert_interval_to_seconds(60, "60s", "60second", "60seconds")
+        self.assert_interval_to_seconds(
+            1234567, "1234567s", "1234567second", "1234567seconds")
+        self.assert_interval_to_seconds(12, "012s", "012second", "012seconds")
 
     def test_interval_to_seconds_with_minutes(self):
         """
         With a suffix of "min" or "minutes", the interval is parsed in minutes.
         """
-        self.assertEqual(interval_to_seconds("0min"), 0)
-        self.assertEqual(interval_to_seconds("0minutes"), 0)
-        self.assertEqual(interval_to_seconds("1min"), 60)
-        self.assertEqual(interval_to_seconds("1minutes"), 60)
-        self.assertEqual(interval_to_seconds("60min"), 3600)
-        self.assertEqual(interval_to_seconds("60minutes"), 3600)
-        self.assertEqual(interval_to_seconds("1234567min"), 1234567 * 60)
-        self.assertEqual(interval_to_seconds("1234567minutes"), 1234567 * 60)
-        self.assertEqual(interval_to_seconds("012min"), 720)
-        self.assertEqual(interval_to_seconds("012minutes"), 720)
+        self.assert_interval_to_seconds(0, "0min", "0minute", "0minutes")
+        self.assert_interval_to_seconds(60, "1min", "1minute", "1minutes")
+        self.assert_interval_to_seconds(3600, "60min", "60minute", "60minutes")
+        self.assert_interval_to_seconds(
+            1234567 * 60, "1234567min", "1234567minute", "1234567minutes")
+        self.assert_interval_to_seconds(
+            720, "012min", "012minute", "012minutes")
 
     def test_interval_to_seconds_with_hours(self):
         """
         With a suffix of "h" or "hours", the interval is parsed in hours.
         """
-        self.assertEqual(interval_to_seconds("0h"), 0)
-        self.assertEqual(interval_to_seconds("0hours"), 0)
-        self.assertEqual(interval_to_seconds("1h"), 3600)
-        self.assertEqual(interval_to_seconds("1hours"), 3600)
-        self.assertEqual(interval_to_seconds("24h"), 24 * 3600)
-        self.assertEqual(interval_to_seconds("24hours"), 24 * 3600)
-        self.assertEqual(interval_to_seconds("1234h"), 1234 * 3600)
-        self.assertEqual(interval_to_seconds("1234hours"), 1234 * 3600)
-        self.assertEqual(interval_to_seconds("012h"), 12 * 3600)
-        self.assertEqual(interval_to_seconds("012hours"), 12 * 3600)
+        self.assert_interval_to_seconds(0, "0h", "0hour", "0hours")
+        self.assert_interval_to_seconds(3600, "1h", "1hour", "1hours")
+        self.assert_interval_to_seconds(24 * 3600, "24h", "24hour", "24hours")
+        self.assert_interval_to_seconds(
+            1234 * 3600, "1234h", "1234hour", "1234hours")
+        self.assert_interval_to_seconds(
+            12 * 3600, "012h", "012hour", "012hours")
 
     def test_interval_to_seconds_with_days(self):
         """
         With a suffix of "d" or "days", the interval is parsed in days.
         """
-        self.assertEqual(interval_to_seconds("0d"), 0)
-        self.assertEqual(interval_to_seconds("0days"), 0)
-        self.assertEqual(interval_to_seconds("1d"), 86400)
-        self.assertEqual(interval_to_seconds("1days"), 86400)
-        self.assertEqual(interval_to_seconds("60d"), 60 * 86400)
-        self.assertEqual(interval_to_seconds("60days"), 60 * 86400)
-        self.assertEqual(interval_to_seconds("1234d"), 1234 * 86400)
-        self.assertEqual(interval_to_seconds("1234d"), 1234 * 86400)
-        self.assertEqual(interval_to_seconds("014d"), 14 * 86400)
-        self.assertEqual(interval_to_seconds("014days"), 14 * 86400)
+        self.assert_interval_to_seconds(0, "0d", "0day", "0days")
+        self.assert_interval_to_seconds(86400, "1d", "1day", "1days")
+        self.assert_interval_to_seconds(60 * 86400, "60d", "60day", "60days")
+        self.assert_interval_to_seconds(
+            1234 * 86400, "1234d", "1234day", "1234days")
+        self.assert_interval_to_seconds(
+            14 * 86400, "014d", "014day", "014days")
 
     def test_interval_to_seconds_with_weeks(self):
         """
         With a suffix of "w" or "weeks", the interval is parsed in weeks.
         """
-        self.assertEqual(interval_to_seconds("0w"), 0)
-        self.assertEqual(interval_to_seconds("0weeks"), 0)
-        self.assertEqual(interval_to_seconds("1w"), 604800)
-        self.assertEqual(interval_to_seconds("1weeks"), 604800)
-        self.assertEqual(interval_to_seconds("4w"), 2419200)
-        self.assertEqual(interval_to_seconds("4weeks"), 2419200)
-        self.assertEqual(interval_to_seconds("123w"), 123 * 604800)
-        self.assertEqual(interval_to_seconds("123weeks"), 123 * 604800)
-        self.assertEqual(interval_to_seconds("012w"), 12 * 604800)
-        self.assertEqual(interval_to_seconds("012weeks"), 12 * 604800)
+        self.assert_interval_to_seconds(0, "0w", "0week", "0weeks")
+        self.assert_interval_to_seconds(604800, "1w", "1week", "1weeks")
+        self.assert_interval_to_seconds(4 * 604800, "4w", "4week", "4weeks")
+        self.assert_interval_to_seconds(
+            123 * 604800, "123w", "123week", "123weeks")
+        self.assert_interval_to_seconds(
+            12 * 604800, "012w", "012week", "012weeks")
 
     def test_interval_to_seconds_with_months(self):
         """
         With a suffix of "mon" or "months", the interval is parsed in months.
         """
-        self.assertEqual(interval_to_seconds("0mon"), 0)
-        self.assertEqual(interval_to_seconds("0months"), 0)
-        self.assertEqual(interval_to_seconds("1mon"), 2592000)
-        self.assertEqual(interval_to_seconds("1months"), 2592000)
-        self.assertEqual(interval_to_seconds("12mon"), 12 * 2592000)
-        self.assertEqual(interval_to_seconds("12months"), 12 * 2592000)
-        self.assertEqual(interval_to_seconds("123mon"), 123 * 2592000)
-        self.assertEqual(interval_to_seconds("123months"), 123 * 2592000)
-        self.assertEqual(interval_to_seconds("012mon"), 12 * 2592000)
-        self.assertEqual(interval_to_seconds("012months"), 12 * 2592000)
+        self.assert_interval_to_seconds(0, "0mon", "0month", "0months")
+        self.assert_interval_to_seconds(2592000, "1mon", "1month", "1months")
+        self.assert_interval_to_seconds(
+            12 * 2592000, "12mon", "12month", "12months")
+        self.assert_interval_to_seconds(
+            123 * 2592000, "123mon", "123month", "123months")
+        self.assert_interval_to_seconds(
+            12 * 2592000, "012mon", "012month", "012months")
 
     def test_interval_to_seconds_with_years(self):
         """
         With a suffix of "y" or "years", the interval is parsed in years.
         """
-        self.assertEqual(interval_to_seconds("0y"), 0)
-        self.assertEqual(interval_to_seconds("0years"), 0)
-        self.assertEqual(interval_to_seconds("1y"), 31536000)
-        self.assertEqual(interval_to_seconds("1years"), 31536000)
-        self.assertEqual(interval_to_seconds("5y"), 5 * 31536000)
-        self.assertEqual(interval_to_seconds("5years"), 5 * 31536000)
-        self.assertEqual(interval_to_seconds("123y"), 123 * 31536000)
-        self.assertEqual(interval_to_seconds("123years"), 123 * 31536000)
-        self.assertEqual(interval_to_seconds("02y"), 2 * 31536000)
-        self.assertEqual(interval_to_seconds("02years"), 2 * 31536000)
+        self.assert_interval_to_seconds(0, "0y", "0year", "0years")
+        self.assert_interval_to_seconds(31536000, "1y", "1year", "1years")
+        self.assert_interval_to_seconds(5 * 31536000, "5y", "5year", "5years")
+        self.assert_interval_to_seconds(
+            123 * 31536000, "123y", "123year", "123years")
+        self.assert_interval_to_seconds(
+            2 * 31536000, "02y", "02year", "02years")
 
     def test_parse_time_with_invalid_interval(self):
         """
