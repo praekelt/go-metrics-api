@@ -143,3 +143,26 @@ class TestGraphiteTimeParser(TestCase):
             parse_time("-1s", now), datetime(2015, 1, 31, 23, 59, 59))
         self.assertEqual(
             parse_time("-2w", now), datetime(2015, 1, 18, 0, 0, 0))
+        self.assertEqual(
+            parse_time("-2w", datetime(2015, 1, 24, 10, 15, 25)),
+            datetime(2015, 1, 10, 10, 15, 25))
+
+    def test_parse_time_special_values(self):
+        """
+        The strings "now", "yesterday", "today", and "tomorrow" return what one
+        might expect.
+        """
+        now1 = datetime(2015, 2, 1, 0, 0, 0)
+        now2 = datetime(2015, 1, 24, 10, 15, 25)
+        self.assertEqual(parse_time("now", now1), now1)
+        self.assertEqual(parse_time("now", now2), now2)
+        self.assertEqual(
+            parse_time("yesterday", now1), datetime(2015, 1, 31, 0, 0, 0))
+        self.assertEqual(
+            parse_time("yesterday", now2), datetime(2015, 1, 23, 10, 15, 25))
+        self.assertEqual(parse_time("today", now1), now1)
+        self.assertEqual(parse_time("today", now2), now2)
+        self.assertEqual(
+            parse_time("tomorrow", now1), datetime(2015, 2, 2, 0, 0, 0))
+        self.assertEqual(
+            parse_time("tomorrow", now2), datetime(2015, 1, 25, 10, 15, 25))

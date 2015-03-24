@@ -71,6 +71,12 @@ def parse_time(time_str, now):
           variety of formats. Currently, only relative time specifiers are
           supported.
     """
+    if time_str in ["now", "today"]:
+        return now
+    if time_str == "yesterday":
+        return now - timedelta(days=1)
+    if time_str == "tomorrow":
+        return now + timedelta(days=1)
     if time_str.startswith("-"):
         interval = interval_to_seconds(time_str[1:])
         return now - timedelta(seconds=interval)

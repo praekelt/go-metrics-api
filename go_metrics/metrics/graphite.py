@@ -98,10 +98,9 @@ class GraphiteMetrics(Metrics):
         data points being requested.
         """
         now = datetime.utcnow()
-        start_dt = parse_time(start, now)
-        end_dt = parse_time(end, now)
+        # "end" can be earlier than "start".
+        period = abs(parse_time(end, now) - parse_time(start, now))
         interval_secs = interval_to_seconds(interval)
-        period = end_dt - start_dt
         return (period.seconds + 86400 * period.days) / interval_secs
 
     @inlineCallbacks

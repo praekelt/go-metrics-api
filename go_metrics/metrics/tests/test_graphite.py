@@ -167,6 +167,14 @@ class TestGraphiteMetrics(TestCase):
             str(err),
             "86400 data points requested, maximum allowed is 10000")
 
+        # "from" can be later than "until".
+        err = yield self.assertFailure(
+            metrics.get(**{'from': 'now', 'until': '-1d', 'interval': '1s'}),
+            BadMetricsQueryError)
+        self.assertEqual(
+            str(err),
+            "86400 data points requested, maximum allowed is 10000")
+
     @inlineCallbacks
     def test_reject_large_request_with_config(self):
         """
