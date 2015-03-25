@@ -51,13 +51,17 @@ class TestGraphiteTimeParser(TestCase):
         """
         With a suffix of "min" or "minutes", the interval is parsed in minutes.
         """
-        self.assert_interval_to_seconds(0, "0min", "0minute", "0minutes")
-        self.assert_interval_to_seconds(60, "1min", "1minute", "1minutes")
-        self.assert_interval_to_seconds(3600, "60min", "60minute", "60minutes")
         self.assert_interval_to_seconds(
-            1234567 * 60, "1234567min", "1234567minute", "1234567minutes")
+            0, "0min", "0mins", "0minute", "0minutes")
         self.assert_interval_to_seconds(
-            720, "012min", "012minute", "012minutes")
+            60, "1min", "1mins", "1minute", "1minutes")
+        self.assert_interval_to_seconds(
+            3600, "60min", "60mins", "60minute", "60minutes")
+        self.assert_interval_to_seconds(
+            1234567 * 60, "1234567min", "1234567mins", "1234567minute",
+            "1234567minutes")
+        self.assert_interval_to_seconds(
+            720, "012min", "012mins", "012minute", "012minutes")
 
     def test_interval_to_seconds_with_hours(self):
         """
@@ -128,6 +132,7 @@ class TestGraphiteTimeParser(TestCase):
         now = datetime(2015, 2, 1, 0, 0, 0)
         self.assert_TPVE(parse_time, "-0", now)
         self.assert_TPVE(parse_time, "-12", now)
+        self.assert_TPVE(parse_time, "-12fortnights", now)
         self.assert_TPVE(parse_time, "-20150101", now)
 
     def test_parse_time_with_interval(self):
@@ -166,3 +171,60 @@ class TestGraphiteTimeParser(TestCase):
             parse_time("tomorrow", now1), datetime(2015, 2, 2, 0, 0, 0))
         self.assertEqual(
             parse_time("tomorrow", now2), datetime(2015, 1, 25, 10, 15, 25))
+
+    def test_parse_time_absolute_datetime(self):
+        """
+        Absolute timestamps in the form ``HH:MM_YYYYMMDD`` are parsed into
+        appropriate datetimes with seconds set to zero.
+        """
+        self.assertEqual(
+            parse_time("00:00_20150201", None), datetime(2015, 2, 1, 0, 0, 0))
+        self.assertEqual(
+            parse_time("00:00_19700101", None), datetime(1970, 1, 1, 0, 0, 0))
+
+    def test_parse_time_absolute_date(self):
+        """
+        Absolute timestamps in the form ``YYYYMMDD`` are parsed into
+        appropriate datetimes with the time set to midnight.
+        """
+        self.assertEqual(
+            parse_time("20150201", None), datetime(2015, 2, 1, 0, 0, 0))
+        self.assertEqual(
+            parse_time("19700101", None), datetime(1970, 1, 1, 0, 0, 0))
+        self.assertEqual(
+            parse_time("19010101", None), datetime(1901, 1, 1, 0, 0, 0))
+        self.assertEqual(
+            parse_time("99991231", None), datetime(9999, 12, 31, 0, 0, 0))
+
+    def test_parse_time_unix_timestamp(self):
+        """
+        Unix timestamps are accepted as absolute time specifications.
+        """
+        self.assertEqual(
+            parse_time("1422748800", None), datetime(2015, 2, 1, 0, 0, 0))
+        self.assertEqual(parse_time("0", None), datetime(1970, 1, 1, 0, 0, 0))
+        # The following are treated as unix timestamps, not YYYYMMDD strings.
+        self.assertEqual(
+            parse_time("19000101", None), datetime(1970, 8, 8, 21, 48, 21))
+        self.assertEqual(
+            parse_time("20150132", None), datetime(1970, 8, 22, 5, 15, 32))
+        self.assertEqual(
+            parse_time("20151301", None), datetime(1970, 8, 22, 5, 35, 1))
+
+    def test_parse_time_with_invalid_absolute_datetime(self):
+        """
+        If given a time_str containing an invalid value, a TimeParserValueError
+        is raised.
+        """
+        self.assert_TPVE(parse_time, "", None)
+        self.assert_TPVE(parse_time, "blahblah", None)
+
+        # Graphite accepts the following, we don't.
+        self.assert_TPVE(parse_time, "2015_02_01", None)
+        self.assert_TPVE(parse_time, "12:35 20150201", None)
+        self.assert_TPVE(parse_time, "12:3520150201", None)
+        self.assert_TPVE(parse_time, "12/31/99", None)
+        self.assert_TPVE(parse_time, "6pm today", None)
+        self.assert_TPVE(parse_time, "noon tomorrow", None)
+        self.assert_TPVE(parse_time, "january 1", None)
+        self.assert_TPVE(parse_time, "monday", None)

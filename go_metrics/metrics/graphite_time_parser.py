@@ -2,7 +2,7 @@
 Time period and interval parameter parsers for Graphite backend.
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 import re
 
 
@@ -23,7 +23,7 @@ def _set_unit_value(value, *names):
 
 
 _set_unit_value(1, "s", "second", "seconds")
-_set_unit_value(60, "min", "minute", "minutes")
+_set_unit_value(60, "min", "mins", "minute", "minutes")
 _set_unit_value(3600, "h", "hour", "hours")
 _set_unit_value(86400, "d", "day", "days")
 _set_unit_value(7 * 86400, "w", "week", "weeks")
@@ -52,14 +52,46 @@ def interval_to_seconds(interval_str):
     return count * unit_multiplier
 
 
+def _call_or_raise(exc, func, *args, **kw):
+    """
+    Call func(*args, **kw) and catch any exceptions, raising exc instead.
+
+    This exists to avoid a bunch of boilerplate try/except blocks in
+    parse_absolute_time()
+    """
+    try:
+        return func(*args, **kw)
+    except:
+        raise exc
+
+
 def parse_absolute_time(time_str):
     """
-    Parse a Graphite-compatible absolute time specifier into a
-    datetime object.
+    Parse a Graphite-compatible absolute time specifier into a datetime object.
 
-    NOTE: Currently unimplemented.
+    This accepts `HH:MM_YYYYMMDD` and `YYYYMMDD` formats as well as unix
+    timestamps.
     """
-    raise NotImplementedError("Absolute time specifiers not supported.")
+    # Build an exception to pass to _call_or_raise()
+    exc = TimeParserValueError("Invalid time string: %r" % (time_str,))
+
+    if ":" in time_str:
+        return _call_or_raise(exc, datetime.strptime, time_str, "%H:%M_%Y%m%d")
+    elif time_str.isdigit():
+        # This is the same test graphite uses to determine whether a string is
+        # a unix timestamp or a `YYYYMMDD` string. It's important that we make
+        # the same decisions as graphite because differences could let very
+        # expensive requests slip through and potentially break either the API
+        # or graphite.
+        if len(time_str) == 8 and all([int(time_str[:4]) > 1900,
+                                       int(time_str[4:6]) < 13,
+                                       int(time_str[6:]) < 32]):
+            return _call_or_raise(exc, datetime.strptime, time_str, "%Y%m%d")
+        else:
+            return _call_or_raise(
+                exc, datetime.utcfromtimestamp, int(time_str))
+    else:
+        raise exc
 
 
 def parse_time(time_str, now):
