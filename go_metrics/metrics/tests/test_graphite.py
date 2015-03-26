@@ -94,6 +94,38 @@ class TestGraphiteMetrics(TestCase):
         })
 
     @inlineCallbacks
+    def test_get_one_request_no_list(self):
+        reqs = []
+
+        def handler(req):
+            reqs.append(req)
+            return '{}'
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(graphite_url=graphite.url)
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        yield metrics.get(**{
+            'm': 'stores.a.b.last',
+            'from': '-48h',
+            'until': '-24h',
+            'interval': '1day'
+        })
+
+        [req] = reqs
+
+        self.assertTrue(req.uri.startswith('/render/?'))
+
+        self.assertEqual(req.args, {
+            'format': ['json'],
+            'from': ['-48h'],
+            'until': ['-24h'],
+            'target': [
+                "alias(summarize(go.campaigns.owner-1.stores.a.b.last,"
+                " '1day', 'last', false), 'stores.a.b.last')"],
+        })
+
+    @inlineCallbacks
     def test_get_response(self):
         def handler(req):
             return json.dumps([{
@@ -176,6 +208,38 @@ class TestGraphiteMetrics(TestCase):
             "86400 data points requested, maximum allowed is 10000")
 
     @inlineCallbacks
+    def test_reject_large_request_multiple_metrics(self):
+        """
+        Requests for excessive amounts of data are rejected, even if the
+        results for individual metrics are within the limits.
+        """
+        reqs = []
+
+        def handler(req):
+            reqs.append(req)
+            return '{}'
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(graphite_url=graphite.url)
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        # Two metrics, 8640 points each.
+        err = yield self.assertFailure(
+            metrics.get(**{
+                'm': ['a', 'b'],
+                'from': '-1d',
+                'interval': '10s',
+            }),
+            BadMetricsQueryError)
+        self.assertEqual(
+            str(err),
+            "17280 data points requested, maximum allowed is 10000")
+
+        # Only one metric.
+        resp = yield metrics.get(**{'from': '-1d', 'interval': '10s'})
+        self.assertEqual(resp, {})
+
+    @inlineCallbacks
     def test_reject_large_request_with_config(self):
         """
         The excessive data rejection threshold is configurable.
@@ -191,7 +255,7 @@ class TestGraphiteMetrics(TestCase):
             graphite_url=graphite.url, max_response_size=100000)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
-        # Too much data
+        # Too much data.
         err = yield self.assertFailure(
             metrics.get(**{'from': '-2d', 'interval': '1s'}),
             BadMetricsQueryError)
@@ -199,7 +263,7 @@ class TestGraphiteMetrics(TestCase):
             str(err),
             "172800 data points requested, maximum allowed is 100000")
 
-        # Not too much data
+        # Not too much data.
         resp = yield metrics.get(**{'from': '-1d', 'interval': '1s'})
         self.assertEqual(resp, {})
 

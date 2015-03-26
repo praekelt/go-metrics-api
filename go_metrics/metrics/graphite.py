@@ -57,9 +57,6 @@ class GraphiteMetrics(Metrics):
     def _build_render_url(self, params):
         metrics = params['m']
 
-        if (isinstance(metrics, basestring)):
-            metrics = [metrics]
-
         targets = [
             self._build_metric_name(
                 name, params['interval'], params['align_to_from'])
@@ -115,8 +112,12 @@ class GraphiteMetrics(Metrics):
         }
         params.update(kw)
 
+        if (isinstance(params['m'], basestring)):
+            params['m'] = [params['m']]
+
         predicted_size = self._predict_data_size(
             params['from'], params['until'], params['interval'])
+        predicted_size *= max(1, len(params['m']))
         max_response_size = self.backend.config.max_response_size
         if predicted_size > max_response_size:
             raise BadMetricsQueryError(
