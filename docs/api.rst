@@ -146,13 +146,23 @@ API Methods
         :ref:`metric-types` for an overview of the metric name formats.
 
     :query from:
-        The beginning time period to retrieve values from. Can be in any form
-        accepted by graphite. See graphite's `from and until`_ documentation.
+        The beginning time period to retrieve values from. Accepts a subset of
+        the forms accepted by graphite. Any purely relative time (such as
+        ``-3days`` or ``yesterday``) is allowed, but absolute timestamps must
+        be in the form ``HH:MM_YYYYMMDD`` or ``YYYYMMDD``. Unix timestamp
+        values (integer only) are also accepted. Mixing absolute and relative
+        times is not allowed. See graphite's `from and until`_ documentation
+        for reference, but bear these limitations in mind when reading it.
         Defaults to 24 hours ago.
 
     :query until:
-        The ending time period to retrieve values until. Can be in any
-        form accepted by graphite. See graphite's `from and until`_ documentation.
+        The ending time period to retrieve values from. Accepts a subset of
+        the forms accepted by graphite. Any purely relative time (such as
+        ``-3days`` or ``yesterday``) is allowed, but absolute timestamps must
+        be in the form ``HH:MM_YYYYMMDD`` or ``YYYYMMDD``. Unix timestamp
+        values (integer only) are also accepted. Mixing absolute and relative
+        times is not allowed. See graphite's `from and until`_ documentation
+        for reference, but bear these limitations in mind when reading it.
         Defaults to the current time.
 
     :query interval:
