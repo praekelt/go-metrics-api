@@ -218,6 +218,8 @@ class TestGraphiteTimeParser(TestCase):
         """
         self.assert_TPVE(parse_time, "", None)
         self.assert_TPVE(parse_time, "blahblah", None)
+        # This is detected as a YYYYMMDD string, but it's invalid.
+        self.assert_TPVE(parse_time, "20150231", None)
 
         # Graphite accepts the following, we don't.
         self.assert_TPVE(parse_time, "2015_02_01", None)
