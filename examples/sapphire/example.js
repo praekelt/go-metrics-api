@@ -88,7 +88,7 @@ function update() {
   var widgets = d3.values(data.widgets);
 
   function next(err) {
-    if (err) return console.error(err)
+    if (err) return console.error(err);
     if (++i < widgets.length) updateWidget(widgets[i], next);
   }
 
