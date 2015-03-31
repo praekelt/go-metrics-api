@@ -6,6 +6,7 @@ var data = {
   step: 10000,
   widgets: {
     a: {
+      results: [],
       title: 'A (last 30 days)',
       key: 'stores.store1.a.last',
       from: '-30d',
@@ -13,6 +14,7 @@ var data = {
       nulls: 'omit'
     },
     b: {
+      results: [],
       title: 'B (last 30 days)',
       key: 'stores.store1.b.last',
       from: '-30d',
@@ -20,6 +22,7 @@ var data = {
       nulls: 'omit'
     },
     c: {
+      results: [],
       title: 'C (last 30 days)',
       key: 'stores.store1.c.last',
       from: '-30d',
@@ -32,19 +35,21 @@ var data = {
       nulls: 'omit',
       title: 'A, B and C today',
       metrics: [{
+        results: [],
         title: 'A',
         key: 'stores.store1.a.last',
       }, {
+        results: [],
         title: 'B',
         key: 'stores.store1.b.last'
       }, {
+        results: [],
         title: 'C',
         key: 'stores.store1.c.last'
       }],
     }
   }
 };
-
 
 // Create the widget components. Widget configuration would be done here.
 var last = sapphire.widgets.last();
@@ -85,7 +90,6 @@ function update() {
   function next(err) {
     if (err) return console.error(err)
     if (++i < widgets.length) updateWidget(widgets[i], next);
-    else draw();
   }
 
   next();
@@ -118,6 +122,7 @@ function updateWidget(widget, done) {
   req.get(function(err, result) {
     if (err) return done(err);
     updateMetrics(widget, result);
+    draw();
     done();
   });
 }
@@ -127,7 +132,7 @@ function updateWidget(widget, done) {
 function updateMetrics(widget, data) {
   metrics(widget)
     .forEach(function(d) {
-      d.values = data[d.key];
+      d.values = data[d.key] || [];
     });
 }
 
