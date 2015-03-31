@@ -51,6 +51,7 @@ var data = {
   }
 };
 
+
 // Create the widget components. Widget configuration would be done here.
 var last = sapphire.widgets.last();
 var lines = sapphire.widgets.lines();
@@ -111,20 +112,24 @@ function update() {
 //
 // 5. Invoke the `done` callback so the next metric request or draw can happen
 function updateWidget(widget, done) {
-  var req = d3.json(data.url + '?' + queryString.stringify({
-      from: widget.from,
-      interval: widget.interval,
-      nulls: widget.nulls,
-      m: metrics(widget).map(function(d) { return d.key; })
-    }))
-    .header('Authorization', ['Bearer', data.token].join(' '));
+  d3.json(metricsUrl(widget))
+    .header('Authorization', ['Bearer', data.token].join(' '))
+    .get(function(err, result) {
+      if (err) return done(err);
+      updateMetrics(widget, result);
+      draw();
+      done();
+    });
+}
 
-  req.get(function(err, result) {
-    if (err) return done(err);
-    updateMetrics(widget, result);
-    draw();
-    done();
-  });
+
+function metricsUrl(widget) {
+  return data.url + '?' + queryString.stringify({
+    from: widget.from,
+    interval: widget.interval,
+    nulls: widget.nulls,
+    m: metrics(widget).map(function(d) { return d.key; })
+  })
 }
 
 
