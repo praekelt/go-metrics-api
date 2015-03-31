@@ -82,7 +82,8 @@ function update() {
   var i = -1;
   var widgets = d3.values(data.widgets);
 
-  function next() {
+  function next(err) {
+    if (err) return console.error(err)
     if (++i < widgets.length) updateWidget(widgets[i], next);
     else draw();
   }
@@ -106,29 +107,19 @@ function update() {
 //
 // 5. Invoke the `done` callback so the next metric request or draw can happen
 function updateWidget(widget, done) {
-  var req = superagent
-    .get(data.url)
-    .set('Authorization', ['Bearer', data.token].join(' '))
-    .type('json')
-    .query({
+  var req = d3.json(data.url + '?' + queryString.stringify({
       from: widget.from,
       interval: widget.interval,
-      nulls: widget.nulls
-    });
+      nulls: widget.nulls,
+      m: metrics(widget).map(function(d) { return d.key; })
+    }))
+    .header('Authorization', ['Bearer', data.token].join(' '));
 
-  metrics(widget)
-    .forEach(function(d) { req.query({m: d.key}); });
-
-  req
-    .end(function(res) {
-      if (!res.ok) {
-        console.error(res.text);
-        return;
-      }
-
-      updateMetrics(widget, res.body);
-      done();
-    });
+  req.get(function(err, result) {
+    if (err) return done(err);
+    updateMetrics(widget, result);
+    done();
+  });
 }
 
 
