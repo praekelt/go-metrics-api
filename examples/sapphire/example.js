@@ -129,7 +129,7 @@ function metricsUrl(widget) {
     interval: widget.interval,
     nulls: widget.nulls,
     m: metrics(widget).map(function(d) { return d.key; })
-  })
+  });
 }
 
 
