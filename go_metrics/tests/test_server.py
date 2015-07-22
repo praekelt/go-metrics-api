@@ -1,6 +1,7 @@
 """
 Tests for the metrics API's server.
 """
+import json
 import yaml
 
 from twisted.internet.defer import succeed, inlineCallbacks, maybeDeferred
@@ -128,3 +129,21 @@ class TestMetricsApi(TestCase):
 
         [f] = self.flushLoggedErrors(DummyError)
         self.assertEqual(str(f.value), ":(")
+
+    @inlineCallbacks
+    def test_metrics_post(self):
+        self.maxDiff = None
+
+        app = DummyMetricsApi(self.mk_config())
+        app.backend.fixtures.add(
+            foo='bar',
+            baz=['quux', 'corge'],
+            method='fire',
+            result={'grault': 'garply'})
+
+        post = AppHelper(app).post
+        resp = yield post('/metrics/', data=json.dumps({
+            'foo': 'bar',
+            'baz': ['quux', 'corge']
+        }))
+        self.assertEqual((yield resp.json()), {'grault': 'garply'})

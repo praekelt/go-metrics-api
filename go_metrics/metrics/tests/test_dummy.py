@@ -6,17 +6,19 @@ from go_metrics.metrics.dummy import Fixtures, DummyMetrics, DummyBackend
 class TestFixtures(TestCase):
     def test_add(self):
         fixtures = Fixtures()
-        fixtures.add(foo='bar', result={'baz': 'quux'})
+        fixtures.add(foo='bar', method='fire', result={'baz': 'quux'})
         self.assertEqual(fixtures.items, [{
             'foo': 'bar',
+            'method': 'fire',
             'result': {'baz': 'quux'}
         }])
 
-    def test_add_no_result(self):
+    def test_add_defaults(self):
         fixtures = Fixtures()
         fixtures.add(foo='bar')
         self.assertEqual(fixtures.items, [{
             'foo': 'bar',
+            'method': 'get',
             'result': {}
         }])
 
