@@ -27,13 +27,17 @@ class Fixtures(object):
         return {}
 
     def add(self, **kw):
+        kw.setdefault('method', 'get')
         kw.setdefault('result', {})
         self.items.append(kw)
 
 
 class DummyMetrics(Metrics):
     def get(self, **kw):
-        return self.backend.fixtures.match(**kw)
+        return self.backend.fixtures.match(method='get', **kw)
+
+    def fire(self, **kw):
+        return self.backend.fixtures.match(method='fire', **kw)
 
 
 class DummyBackend(MetricsBackend):
