@@ -27,6 +27,15 @@ class MetricsHandler(BaseHandler):
         d.addErrback(self.raise_err, 500, "Failed to retrieve metrics.")
         return d
 
+    def post(self):
+        data = self.parse_json(self.request.body)
+        d = maybeDeferred(self.model.fire, **data)
+        d.addCallback(self.write_object)
+        d.addErrback(self.catch_err, 400, BadMetricsQueryError)
+        d.addErrback(self.catch_err, 500, MetricsBackendError)
+        d.addErrback(self.raise_err, 500, "Failed to fire metric.")
+        return d
+
 
 class MetricsApiConfig(Config):
     backend = ConfigDict("Config for metrics backend", default={})
