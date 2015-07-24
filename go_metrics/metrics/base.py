@@ -36,6 +36,12 @@ class Metrics(object):
         """
         raise NotImplementedError()
 
+    def fire(self, **kw):
+        """
+        Override with backend-specific logic for firing metric values
+        """
+        raise NotImplementedError()
+
 
 class MetricsBackendConfig(Config):
     """"
