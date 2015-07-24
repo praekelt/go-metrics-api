@@ -14,6 +14,8 @@ from go_metrics.metrics.graphite import (
 
 
 class TestGraphiteMetrics(TestCase):
+    timeout = 2
+
     @inlineCallbacks
     def mk_graphite(self, handler=None):
         graphite = MockHttpServer(handler)
@@ -572,6 +574,24 @@ class TestGraphiteMetrics(TestCase):
 
         [req] = reqs
         self.assertEqual(req.getHeader('Authorization'), None)
+
+    @inlineCallbacks
+    def test_post_request(self):
+        reqs = []
+
+        def handler(req):
+            reqs.append(req)
+            return '{}'
+
+        graphite = yield self.mk_graphite(handler)
+        backend = self.mk_backend(graphite_url=graphite.url)
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        yield metrics.fire(**{
+            'foo': 'bar',
+        })
+
+        print reqs
 
 
 class TestGraphiteBackendConfig(TestCase):
