@@ -6,12 +6,15 @@ from datetime import datetime
 from urllib import urlencode
 from urlparse import urljoin
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
 
 import treq
 
 from confmodel.errors import ConfigError
 from confmodel.fields import ConfigText, ConfigBool, ConfigInt
+
+from vumi.blinkenlights.metrics import Metric, MetricManager
+from vumi.service import Worker, WorkerCreator
 
 from go_metrics.metrics.base import (
     Metrics, MetricsBackend, MetricsBackendError, BadMetricsQueryError)
@@ -48,7 +51,8 @@ null_parsers = {
 class GraphiteMetrics(Metrics):
     def _build_metric_name(self, name, interval, align_to_from):
         agg = agg_from_name(name)
-        full_name = "go.campaigns.%s.%s" % (self.owner_id, name)
+        full_name = "%s.campaigns.%s.%s" % (
+            self.backend.config.prefix, self.owner_id, name)
 
         return (
             "alias(summarize(%s, '%s', '%s', %s), '%s')" %
@@ -141,11 +145,49 @@ class GraphiteMetrics(Metrics):
         null_parser = null_parsers[params['nulls']]
         returnValue(self._parse_response((yield resp.json()), null_parser))
 
+    @inlineCallbacks
+    def fire(self, **kw):
+        config = self.backend.config
+        wc = WorkerCreator({
+            'hostname': config.amqp_hostname,
+            'port': config.amqp_port,
+            'username': config.amqp_username,
+            'password': config.amqp_password,
+            'vhost': config.amqp_vhost,
+            'specfile': config.amqp_spec,
+            })
+        worker = wc.create_worker_by_class(MetricWorker, {
+            'prefix': config.prefix})
+        yield worker._started_d
+        mm = worker.metric_manager
+        metric = mm.register(Metric("a.value"))
+        metric.set(2.5)
+        mm.publish_metrics()
+        returnValue({})
+
+
+class MetricWorker(Worker):
+    def __init__(self, *args, **kwargs):
+        super(MetricWorker, self).__init__(*args, **kwargs)
+        self._prefix = self.config.get('prefix')
+        self._started_d = Deferred()
+
+    @inlineCallbacks
+    def startWorker(self):
+        print 'asdf'
+        self.metric_manager = yield self.start_publisher(
+            MetricManager, '%s.' % self._prefix)
+        self.started_d.callback()
+
 
 class GraphiteBackendConfig(MetricsBackend.config_class):
     graphite_url = ConfigText(
         "Url for the graphite web server to query",
         default='http://127.0.0.1:8080')
+
+    prefix = ConfigText(
+        "Prefix for all metric names. Defaults to 'go'",
+        default='go')
 
     persistent = ConfigBool(
         ("Flag given to treq telling it whether to maintain a single "
@@ -165,6 +207,30 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
          "time range and interval that contains more data than this, it is "
          "rejected."),
         default=10000)
+
+    amqp_hostname = ConfigText(
+        "Hostname for where AMQP broker is located",
+        default='127.0.0.1')
+
+    amqp_port = ConfigInt(
+        "Port to connect to the AMQP broker",
+        default=5672)
+
+    amqp_username = ConfigText(
+        "Username to connect to the AMQP broker",
+        default="guest")
+
+    amqp_password = ConfigText(
+        "Password to connect to the AMQP broker",
+        default="guest")
+
+    amqp_vhost = ConfigText(
+        "Virtualhost for AMQP broker",
+        default="/develop")
+
+    amqp_spec = ConfigText(
+        "Spec file for AMQP",
+        default="amqp-spec-0-8.xml")
 
     def post_validate(self):
         auth = (self.username, self.password)
