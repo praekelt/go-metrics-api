@@ -6,6 +6,7 @@ var data = {
   step: 10000,
   widgets: {
     a: {
+      results: [],
       title: 'A (last 30 days)',
       key: 'stores.store1.a.last',
       from: '-30d',
@@ -13,6 +14,7 @@ var data = {
       nulls: 'omit'
     },
     b: {
+      results: [],
       title: 'B (last 30 days)',
       key: 'stores.store1.b.last',
       from: '-30d',
@@ -20,6 +22,7 @@ var data = {
       nulls: 'omit'
     },
     c: {
+      results: [],
       title: 'C (last 30 days)',
       key: 'stores.store1.c.last',
       from: '-30d',
@@ -32,12 +35,15 @@ var data = {
       nulls: 'omit',
       title: 'A, B and C today',
       metrics: [{
+        results: [],
         title: 'A',
         key: 'stores.store1.a.last',
       }, {
+        results: [],
         title: 'B',
         key: 'stores.store1.b.last'
       }, {
+        results: [],
         title: 'C',
         key: 'stores.store1.c.last'
       }],
@@ -82,9 +88,9 @@ function update() {
   var i = -1;
   var widgets = d3.values(data.widgets);
 
-  function next() {
+  function next(err) {
+    if (err) return console.error(err);
     if (++i < widgets.length) updateWidget(widgets[i], next);
-    else draw();
   }
 
   next();
@@ -106,29 +112,24 @@ function update() {
 //
 // 5. Invoke the `done` callback so the next metric request or draw can happen
 function updateWidget(widget, done) {
-  var req = superagent
-    .get(data.url)
-    .set('Authorization', ['Bearer', data.token].join(' '))
-    .type('json')
-    .query({
-      from: widget.from,
-      interval: widget.interval,
-      nulls: widget.nulls
-    });
-
-  metrics(widget)
-    .forEach(function(d) { req.query({m: d.key}); });
-
-  req
-    .end(function(res) {
-      if (!res.ok) {
-        console.error(res.text);
-        return;
-      }
-
-      updateMetrics(widget, res.body);
+  d3.json(metricsUrl(widget))
+    .header('Authorization', ['Bearer', data.token].join(' '))
+    .get(function(err, result) {
+      if (err) return done(err);
+      updateMetrics(widget, result);
+      draw();
       done();
     });
+}
+
+
+function metricsUrl(widget) {
+  return data.url + '?' + queryString.stringify({
+    from: widget.from,
+    interval: widget.interval,
+    nulls: widget.nulls,
+    m: metrics(widget).map(function(d) { return d.key; })
+  });
 }
 
 
@@ -136,7 +137,7 @@ function updateWidget(widget, done) {
 function updateMetrics(widget, data) {
   metrics(widget)
     .forEach(function(d) {
-      d.values = data[d.key];
+      d.values = data[d.key] || [];
     });
 }
 

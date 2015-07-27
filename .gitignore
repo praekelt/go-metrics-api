@@ -57,3 +57,5 @@ docs/_build/
 
 # Virtual Env
 /ve/
+
+/examples/**/bower_components/
