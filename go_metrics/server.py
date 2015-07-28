@@ -27,13 +27,18 @@ class MetricsHandler(BaseHandler):
         d.addErrback(self.raise_err, 500, "Failed to retrieve metrics.")
         return d
 
+    def _assert_dict(self, d):
+        if not isinstance(d, dict):
+            raise BadMetricsQueryError(
+                "Invalid query %r, should be dict, not %s" % (d, type(d)))
+
     def post(self):
         data = self.parse_json(self.request.body)
-        d = maybeDeferred(self.model.fire, **data)
+        d = maybeDeferred(self._assert_dict, data)
+        d.addCallback(lambda _: self.model.fire(**data))
         d.addCallback(self.write_object)
         d.addErrback(self.catch_err, 400, BadMetricsQueryError)
-        d.addErrback(self.catch_err, 500, MetricsBackendError)
-        d.addErrback(self.raise_err, 500, "Failed to fire metric.")
+        d.addErrback(self.raise_err, 500, "Failed to fire metrics.")
         return d
 
 

@@ -145,3 +145,54 @@ class TestMetricsApi(TestCase):
             'baz': ['quux', 'corge']
         }))
         self.assertEqual((yield resp.json()), {'grault': 'garply'})
+
+    @inlineCallbacks
+    def test_metrics_post_async(self):
+        app = DummyMetricsApi(self.mk_config())
+        app.backend.fixtures.add(
+            foo='bar', result=succeed({'baz': 'quux'}), method='fire')
+        post = AppHelper(app).post
+        resp = yield post('/metrics/', data=json.dumps({'foo': 'bar'}))
+        self.assertEqual((yield resp.json()), {'baz': 'quux'})
+
+    @inlineCallbacks
+    def test_metrics_post_query_error(self):
+        app = DummyMetricsApi(self.mk_config())
+
+        def fail():
+            raise BadMetricsQueryError(":(")
+
+        app.backend.fixtures.add(
+            foo='bar', result=maybeDeferred(fail), method='fire')
+
+        post = AppHelper(app).post
+        resp = yield post('/metrics/', data=json.dumps({'foo': 'bar'}))
+
+        self.assertEqual((yield resp.json()), {
+            'status_code': 400,
+            'reason': ':(',
+        })
+
+    @inlineCallbacks
+    def test_metrics_post_uncaught_error(self):
+        app = DummyMetricsApi(self.mk_config())
+
+        class DummyError(Exception):
+            pass
+
+        def fail():
+            raise DummyError(":(")
+
+        app.backend.fixtures.add(
+            foo='bar', result=maybeDeferred(fail), method='fire')
+
+        post = AppHelper(app).post
+        resp = yield post('/metrics/', data=json.dumps({'foo': 'bar'}))
+
+        self.assertEqual((yield resp.json()), {
+            'status_code': 500,
+            'reason': 'Failed to fire metrics.',
+        })
+
+        [f] = self.flushLoggedErrors(DummyError)
+        self.assertEqual(str(f.value), ":(")
