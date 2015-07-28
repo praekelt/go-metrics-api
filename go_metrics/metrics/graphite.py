@@ -161,12 +161,8 @@ class GraphiteMetrics(Metrics):
     @inlineCallbacks
     def fire(self, **kw):
         metrics = []
+        metrics_values = []
         for mname, mvalue in kw.iteritems():
-            if not isinstance(mname, basestring):
-                raise BadMetricsQueryError(
-                    '%r is not a valid metrics name,'
-                    'should be a string' % mname)
-
             metric_name = self._get_full_metric_name(mname)
             aggregator = self.aggregators.get(
                 agg_from_name(metric_name), AVG)
@@ -178,18 +174,17 @@ class GraphiteMetrics(Metrics):
                     '%r is not a valid metric value,'
                     'should be a floating point number' % mvalue)
 
-            metrics.append((Metric(metric_name, [aggregator]), mname, mvalue))
+            metrics.append((Metric(metric_name, [aggregator]), mvalue))
+            metrics_values.append({
+                'name': mname,
+                'value': mvalue, 
+                'aggregator': aggregator.name,
+            })
 
         mm = yield self.backend.worker.metric_manager
-        [mm.oneshot(metric, value) for metric, _, value in metrics]
+        [mm.oneshot(metric, value) for metric, value in metrics]
 
-        returnValue([
-            {
-                'name': name,
-                'aggregator': metric.aggs[0],
-                'value': value,
-            }
-            for metric, name, value in metrics])
+        returnValue(metrics_values)
 
 
 class MetricWorker(Worker):

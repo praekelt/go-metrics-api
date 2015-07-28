@@ -582,22 +582,52 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
         self.assertEqual(req.getHeader('Authorization'), None)
 
     @inlineCallbacks
-    def test_post_request(self):
-        reqs = []
-
-        def handler(req):
-            reqs.append(req)
-            return '{}'
-
-        graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+    def test_post_request_single(self):
+        backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
-        yield metrics.fire(**{
-            'foo': 'bar',
+        res = yield metrics.fire(foo=1.7)
+        [metric] = res
+
+        self.assertEqual(metric, {
+            'name': 'foo',
+            'value': 1.7,
+            'aggregator': 'avg',
         })
 
-        print reqs
+    @inlineCallbacks
+    def test_post_request_multiple(self):
+        backend = yield self.mk_backend()
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        res = yield metrics.fire(foo=1.2, oof=2.7)
+
+        self.assertEqual(sorted(res), sorted([{
+            'name': 'foo',
+            'value': 1.2,
+            'aggregator': 'avg',
+        }, {
+            'name': 'oof',
+            'value': 2.7,
+            'aggregator': 'avg',
+        }]))
+
+    @inlineCallbacks
+    def test_post_request_bad_value(self):
+        backend = yield self.mk_backend()
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        yield self.assertFailure(metrics.fire(foo='bar'), BadMetricsQueryError)
+
+    @inlineCallbacks
+    def test_post_aggregators(self):
+        backend = yield self.mk_backend()
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        for agg in GraphiteMetrics.aggregators:
+            res = yield metrics.fire(**{'foo.%s' % agg: 1.3})
+            [metric] = res
+            self.assertEqual(metric['aggregator'], agg)
 
 
 class TestGraphiteBackendConfig(TestCase):
