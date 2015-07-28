@@ -6,14 +6,16 @@ from datetime import datetime
 from urllib import urlencode
 from urlparse import urljoin
 
-from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
+from twisted.internet.defer import (
+    Deferred, inlineCallbacks, succeed, returnValue)
 
 import treq
 
 from confmodel.errors import ConfigError
 from confmodel.fields import ConfigText, ConfigBool, ConfigInt
 
-from vumi.blinkenlights.metrics import Metric, MetricManager
+from vumi.blinkenlights.metrics import (
+    Metric, MetricManager, SUM, AVG, MAX, MIN, LAST)
 from vumi.service import Worker, WorkerCreator
 
 from go_metrics.metrics.base import (
@@ -49,10 +51,21 @@ null_parsers = {
 
 
 class GraphiteMetrics(Metrics):
+    aggregators = {
+        'sum': SUM,
+        'avg': AVG,
+        'max': MAX,
+        'min': MIN,
+        'last': LAST,
+    }
+
+    def _get_full_metric_name(self, name):
+        return '%s.campaigns.%s.%s' % (
+            self.backend.config.prefix, self.owner_id, name)
+
     def _build_metric_name(self, name, interval, align_to_from):
         agg = agg_from_name(name)
-        full_name = "%s.campaigns.%s.%s" % (
-            self.backend.config.prefix, self.owner_id, name)
+        full_name = self._get_full_metric_name(name)
 
         return (
             "alias(summarize(%s, '%s', '%s', %s), '%s')" %
@@ -147,37 +160,60 @@ class GraphiteMetrics(Metrics):
 
     @inlineCallbacks
     def fire(self, **kw):
-        config = self.backend.config
-        wc = WorkerCreator({
-            'hostname': config.amqp_hostname,
-            'port': config.amqp_port,
-            'username': config.amqp_username,
-            'password': config.amqp_password,
-            'vhost': config.amqp_vhost,
-            'specfile': config.amqp_spec,
-            })
-        worker = wc.create_worker_by_class(MetricWorker, {
-            'prefix': config.prefix})
-        yield worker._started_d
-        mm = worker.metric_manager
-        metric = mm.register(Metric("a.value"))
-        metric.set(2.5)
-        mm.publish_metrics()
-        returnValue({})
+        metrics = []
+        for mname, mvalue in kw.iteritems():
+            if not isinstance(mname, basestring):
+                raise BadMetricsQueryError(
+                    '%r is not a valid metrics name,'
+                    'should be a string' % mname)
+
+            metric_name = self._get_full_metric_name(mname)
+            aggregator = self.aggregators.get(
+                agg_from_name(metric_name), AVG)
+
+            try:
+                mvalue = float(mvalue)
+            except (ValueError, TypeError):
+                raise BadMetricsQueryError(
+                    '%r is not a valid metric value,'
+                    'should be a floating point number' % mvalue)
+
+            metrics.append((Metric(metric_name, [aggregator]), mname, mvalue))
+
+        mm = yield self.backend.worker.metric_manager
+        [mm.oneshot(metric, value) for metric, _, value in metrics]
+
+        returnValue([
+            {
+                'name': name,
+                'aggregator': metric.aggs[0],
+                'value': value,
+            }
+            for metric, name, value in metrics])
 
 
 class MetricWorker(Worker):
     def __init__(self, *args, **kwargs):
         super(MetricWorker, self).__init__(*args, **kwargs)
-        self._prefix = self.config.get('prefix')
         self._started_d = Deferred()
 
     @inlineCallbacks
     def startWorker(self):
-        print 'asdf'
-        self.metric_manager = yield self.start_publisher(
-            MetricManager, '%s.' % self._prefix)
-        self.started_d.callback()
+        self._metric_manager = yield self.start_publisher(
+            MetricManager, '%s.' % self.config.get('prefix'))
+        self._started_d.callback(self._metric_manager)
+
+    @inlineCallbacks
+    def stopWorker(self):
+        if not self._started_d.called:
+            yield self._started_d
+        self._metric_manager.stop()
+
+    @property
+    def metric_manager(self):
+        if self._started_d.called:
+            return succeed(self._metric_manager)
+        return self._started_d
 
 
 class GraphiteBackendConfig(MetricsBackend.config_class):
@@ -226,7 +262,7 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
 
     amqp_vhost = ConfigText(
         "Virtualhost for AMQP broker",
-        default="/develop")
+        default="/")
 
     amqp_spec = ConfigText(
         "Spec file for AMQP",
@@ -245,3 +281,18 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
 class GraphiteBackend(MetricsBackend):
     model_class = GraphiteMetrics
     config_class = GraphiteBackendConfig
+
+    def initialize(self):
+        config = self.config
+        worker_creator = WorkerCreator({
+            'hostname': config.amqp_hostname,
+            'port': config.amqp_port,
+            'username': config.amqp_username,
+            'password': config.amqp_password,
+            'vhost': config.amqp_vhost,
+            'specfile': config.amqp_spec,
+            })
+        self.worker = worker_creator.create_worker_by_class(
+            MetricWorker, {
+                'prefix': config.prefix
+            })

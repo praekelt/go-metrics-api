@@ -7,7 +7,7 @@ from go_metrics.metrics.base import Metrics, MetricsBackend
 
 def matches(target, items):
     for k, v in items.iteritems():
-        if not k in target:
+        if k not in target:
             return False
 
         if target[k] != items[k]:

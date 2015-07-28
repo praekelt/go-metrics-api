@@ -132,8 +132,6 @@ class TestMetricsApi(TestCase):
 
     @inlineCallbacks
     def test_metrics_post(self):
-        self.maxDiff = None
-
         app = DummyMetricsApi(self.mk_config())
         app.backend.fixtures.add(
             foo='bar',
