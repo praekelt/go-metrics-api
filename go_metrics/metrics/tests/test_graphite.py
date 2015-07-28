@@ -10,11 +10,12 @@ from go_api.cyclone.helpers import MockHttpServer
 
 from go_metrics.metrics.base import MetricsBackendError, BadMetricsQueryError
 from go_metrics.metrics.graphite import (
-    GraphiteMetrics, GraphiteBackend, GraphiteBackendConfig)
+    GraphiteMetrics, GraphiteBackend, GraphiteBackendConfig, MetricWorker)
+
+from vumi.tests.utils import VumiWorkerTestCase
 
 
-class TestGraphiteMetrics(TestCase):
-    timeout = 2
+class TestGraphiteMetrics(VumiWorkerTestCase):
 
     @inlineCallbacks
     def mk_graphite(self, handler=None):
@@ -24,9 +25,14 @@ class TestGraphiteMetrics(TestCase):
         self.addCleanup(graphite.stop)
         returnValue(graphite)
 
+    @inlineCallbacks
     def mk_backend(self, **kw):
         kw.setdefault('persistent', False)
-        return GraphiteBackend(kw)
+        backend = GraphiteBackend(kw)
+        backend.worker = yield self.get_worker({
+            'prefix': backend.config.prefix,
+            }, MetricWorker)
+        returnValue(backend)
 
     @inlineCallbacks
     def test_get_request(self):
@@ -37,7 +43,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -72,7 +78,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -104,7 +110,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -143,7 +149,7 @@ class TestGraphiteMetrics(TestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(m=['stores.a.b.last', 'stores.b.a.max'])
@@ -174,7 +180,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -191,7 +197,7 @@ class TestGraphiteMetrics(TestCase):
         """
         Requests for excessive amounts of data are rejected.
         """
-        backend = self.mk_backend()
+        backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         err = yield self.assertFailure(
@@ -222,7 +228,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         # Two metrics, 8640 points each.
@@ -253,7 +259,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(
+        backend = yield self.mk_backend(
             graphite_url=graphite.url, max_response_size=100000)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
@@ -278,7 +284,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(m=['stores.a.b.last'])
@@ -300,7 +306,7 @@ class TestGraphiteMetrics(TestCase):
             return ':('
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         err = yield self.assertFailure(metrics.get(), MetricsBackendError)
@@ -329,7 +335,7 @@ class TestGraphiteMetrics(TestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         self.assertEqual(
@@ -361,7 +367,7 @@ class TestGraphiteMetrics(TestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(
@@ -425,7 +431,7 @@ class TestGraphiteMetrics(TestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(
@@ -471,7 +477,7 @@ class TestGraphiteMetrics(TestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(
@@ -516,7 +522,7 @@ class TestGraphiteMetrics(TestCase):
     @inlineCallbacks
     def test_get_null_handling_unrecognised(self):
         graphite = yield self.mk_graphite()
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         err = yield self.assertFailure(
@@ -533,7 +539,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(
+        backend = yield self.mk_backend(
             graphite_url=graphite.url,
             username="root",
             password="toor")
@@ -561,7 +567,7 @@ class TestGraphiteMetrics(TestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
 
         metrics = GraphiteMetrics(backend, 'owner-1')
 
