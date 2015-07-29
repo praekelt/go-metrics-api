@@ -60,7 +60,7 @@ class GraphiteMetrics(Metrics):
     }
 
     def _get_full_metric_name(self, name):
-        return '%s.campaigns.%s.%s' % (
+        return '%s.%s.%s' % (
             self.backend.config.prefix, self.owner_id, name)
 
     def _build_metric_name(self, name, interval, align_to_from):
@@ -217,8 +217,8 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
         default='http://127.0.0.1:8080')
 
     prefix = ConfigText(
-        "Prefix for all metric names. Defaults to 'go'",
-        default='go')
+        "Prefix for all metric names. Defaults to 'go.campaigns'",
+        default='go.campaigns')
 
     persistent = ConfigBool(
         ("Flag given to treq telling it whether to maintain a single "
