@@ -177,11 +177,11 @@ class GraphiteMetrics(Metrics):
             metrics.append((Metric(metric_name, [aggregator]), mvalue))
             metrics_values.append({
                 'name': mname,
-                'value': mvalue, 
+                'value': mvalue,
                 'aggregator': aggregator.name,
             })
 
-        mm = yield self.backend.worker.metric_manager
+        mm = yield self.backend.worker.get_metric_manager()
         [mm.oneshot(metric, value) for metric, value in metrics]
 
         returnValue(metrics_values)
@@ -204,8 +204,7 @@ class MetricWorker(Worker):
             yield self._started_d
         self._metric_manager.stop()
 
-    @property
-    def metric_manager(self):
+    def get_metric_manager(self):
         if self._started_d.called:
             return succeed(self._metric_manager)
         return self._started_d
