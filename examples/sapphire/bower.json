@@ -1,0 +1,22 @@
+{
+  "name": "go-metrics-api-example-sapphire",
+  "version": "0.0.0",
+  "homepage": "https://github.com/praekelt/go-metrics-api",
+  "authors": [
+    "Praekelt Foundation"
+  ],
+  "license": "BSD",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "query-string": "~1.0.0",
+    "sapphire": "~0.1.1",
+    "d3": "~3.5.5"
+  }
+}
