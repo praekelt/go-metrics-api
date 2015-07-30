@@ -228,7 +228,7 @@ API Methods
 
 .. http:post:: /api/metrics/
 
-    Fires one or many metrics as specified by the body. Body format is is JSON,
+    Fires one or many metrics as specified by the body. Body format is JSON,
     in the format of an object of key value pairs, where the key is the name of
     the metric to fire, and the value is the value to fire for the metric.
     Multiple metrics may be specified.
