@@ -211,18 +211,72 @@ API Methods
         }
 
 
-   **Description of the JSON response attributes**:
+    **Description of the JSON response attributes**:
 
-   The response contains mappings between the metric names and an array of
-   their timestamp-value pairs, where the pairs in the array are in ascending
-   order of their timestamp values (from the earliest time to the latest time).
-   
-   Each pair contains the timestamp under the ``x`` field, and is formatted as
-   the number of milliseconds elapsed since 1 January 1970 00:00:00 UTC.
+    The response contains mappings between the metric names and an array of
+    their timestamp-value pairs, where the pairs in the array are in ascending
+    order of their timestamp values (from the earliest time to the latest time).
 
-   Each pair contains the value under the ``y`` field, and is formatted as a
-   json number.
+    Each pair contains the timestamp under the ``x`` field, and is formatted as
+    the number of milliseconds elapsed since 1 January 1970 00:00:00 UTC.
 
+    Each pair contains the value under the ``y`` field, and is formatted as a
+    json number.
 
 .. _from and until: http://graphite.readthedocs.org/en/latest/render_api.html#from-until
 .. _functions: http://graphite.readthedocs.org/en/latest/functions.html#graphite.render.functions.summarize
+
+.. http:post:: /api/metrics/
+
+    Fires one or many metrics as specified by the body. Body format is is JSON,
+    in the format of an object of key value pairs, where the key is the name of
+    the metric to fire, and the value is the value to fire for the metric.
+    Multiple metrics may be specified.
+
+    **Example request**:
+
+    .. sourcecode:: http
+
+        POST /api/metrics/ HTTP/1.1
+        Host: www.example.org
+        Content-Type: application/json
+        Authorization: Bearer auth-token
+
+        {
+            "metric1": 27.4,
+            "metric2.sum": 11.2
+        }
+
+    **Example response (success)**:
+
+    .. sourcecode:: http
+
+        HTTP/1.1 200 OK
+
+        [
+            {
+                "name": "metric1",
+                "value": 27.4,
+                "aggregator": "avg"
+            },
+            {
+                "name": "metric2.sum",
+                "value": 11.2,
+                "aggregator": "sum"
+            }
+        ]
+
+    **Explination of aggregators**:
+
+    The type of aggregator is set by the last item in the metric name, where
+    items are separated by the fullstop ``.`` character. If the aggregator is
+    not a known aggregator, or no aggregator is specified, the default
+    aggregator of ``avg`` will be used.
+
+    The following is a list of aggregators that are supported by the API:
+
+    :Average: ``avg``. Aggregates by averaging the values in each bucket.
+    :Sum: ``sum``. Aggregates by summing all the values in each bucket.
+    :Maximum: ``max``. Aggregates by choosing the maximum value in each bucket.
+    :Minimum: ``min``. Aggregates by choosing the minimum value in each bucket.
+    :Last: ``last``. Aggregates by choosing the last value in each bucket.
