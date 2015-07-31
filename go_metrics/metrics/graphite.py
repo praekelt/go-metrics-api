@@ -28,6 +28,12 @@ def agg_from_name(name):
     return name.split('.')[-1]
 
 
+def strip_aggregator(name, aggregator):
+    name = name.split('.')
+    if name[-1] == aggregator.name:
+        return '.'.join(name[:-1])
+    return '.'.join(name)
+
 def is_error(resp):
     return 400 <= resp.code <= 599
 
@@ -166,6 +172,7 @@ class GraphiteMetrics(Metrics):
             metric_name = self._get_full_metric_name(mname)
             aggregator = self.aggregators.get(
                 agg_from_name(metric_name), AVG)
+            metric_name = strip_aggregator(metric_name, aggregator)
 
             try:
                 mvalue = float(mvalue)
