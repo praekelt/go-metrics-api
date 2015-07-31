@@ -24,9 +24,6 @@ from go_metrics.metrics.graphite_time_parser import (
     interval_to_seconds, parse_time)
 
 
-def agg_from_name(name):
-    return name.split('.')[-1]
-
 
 def strip_aggregator(name, aggregator):
     name = name.split('.')
@@ -65,12 +62,20 @@ class GraphiteMetrics(Metrics):
         'last': LAST,
     }
 
+    def _agg_from_name(self, name):
+        aggregator_name = name.split('.')[-1]
+        aggregator = self.aggregators.get(aggregator_name)
+        if aggregator is None:
+            raise BadMetricsQueryError(
+                "Aggregator '%s' is not a valid aggregator" % aggregator_name)
+        return aggregator
+
     def _get_full_metric_name(self, name):
         return '%s.%s.%s' % (
             self.backend.config.prefix, self.owner_id, name)
 
     def _build_metric_name(self, name, interval, align_to_from):
-        agg = agg_from_name(name)
+        agg = self._agg_from_name(name).name
         full_name = self._get_full_metric_name(name)
 
         return (
@@ -169,10 +174,9 @@ class GraphiteMetrics(Metrics):
         metrics = []
         metrics_values = []
         for mname, mvalue in kw.iteritems():
-            metric_name = self._get_full_metric_name(mname)
-            aggregator = self.aggregators.get(
-                agg_from_name(metric_name), AVG)
-            metric_name = strip_aggregator(metric_name, aggregator)
+            aggregator = self._agg_from_name(mname)
+            metric_name = strip_aggregator(
+                self._get_full_metric_name(mname), aggregator)
 
             try:
                 mvalue = float(mvalue)
