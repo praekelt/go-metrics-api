@@ -24,12 +24,12 @@ from go_metrics.metrics.graphite_time_parser import (
     interval_to_seconds, parse_time)
 
 
-
 def strip_aggregator(name, aggregator):
     name = name.split('.')
     if name[-1] == aggregator.name:
         return '.'.join(name[:-1])
     return '.'.join(name)
+
 
 def is_error(resp):
     return 400 <= resp.code <= 599
