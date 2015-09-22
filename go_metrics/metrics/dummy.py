@@ -7,7 +7,7 @@ from go_metrics.metrics.base import Metrics, MetricsBackend
 
 def matches(target, items):
     for k, v in items.iteritems():
-        if not k in target:
+        if k not in target:
             return False
 
         if target[k] != items[k]:
@@ -27,13 +27,17 @@ class Fixtures(object):
         return {}
 
     def add(self, **kw):
+        kw.setdefault('method', 'get')
         kw.setdefault('result', {})
         self.items.append(kw)
 
 
 class DummyMetrics(Metrics):
     def get(self, **kw):
-        return self.backend.fixtures.match(**kw)
+        return self.backend.fixtures.match(method='get', **kw)
+
+    def fire(self, **kw):
+        return self.backend.fixtures.match(method='fire', **kw)
 
 
 class DummyBackend(MetricsBackend):

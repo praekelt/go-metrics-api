@@ -6,12 +6,17 @@ from datetime import datetime
 from urllib import urlencode
 from urlparse import urljoin
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import (
+    Deferred, inlineCallbacks, succeed, returnValue)
 
 import treq
 
 from confmodel.errors import ConfigError
 from confmodel.fields import ConfigText, ConfigBool, ConfigInt
+
+from vumi.blinkenlights.metrics import (
+    Metric, MetricManager, SUM, AVG, MAX, MIN, LAST)
+from vumi.service import Worker, WorkerCreator
 
 from go_metrics.metrics.base import (
     Metrics, MetricsBackend, MetricsBackendError, BadMetricsQueryError)
@@ -46,9 +51,21 @@ null_parsers = {
 
 
 class GraphiteMetrics(Metrics):
+    aggregators = {
+        'sum': SUM,
+        'avg': AVG,
+        'max': MAX,
+        'min': MIN,
+        'last': LAST,
+    }
+
+    def _get_full_metric_name(self, name):
+        return '%s.%s.%s' % (
+            self.backend.config.prefix, self.owner_id, name)
+
     def _build_metric_name(self, name, interval, align_to_from):
         agg = agg_from_name(name)
-        full_name = "go.campaigns.%s.%s" % (self.owner_id, name)
+        full_name = self._get_full_metric_name(name)
 
         return (
             "alias(summarize(%s, '%s', '%s', %s), '%s')" %
@@ -141,11 +158,66 @@ class GraphiteMetrics(Metrics):
         null_parser = null_parsers[params['nulls']]
         returnValue(self._parse_response((yield resp.json()), null_parser))
 
+    @inlineCallbacks
+    def fire(self, **kw):
+        metrics = []
+        metrics_values = []
+        for mname, mvalue in kw.iteritems():
+            metric_name = self._get_full_metric_name(mname)
+            aggregator = self.aggregators.get(
+                agg_from_name(metric_name), AVG)
+
+            try:
+                mvalue = float(mvalue)
+            except (ValueError, TypeError):
+                raise BadMetricsQueryError(
+                    '%r is not a valid metric value,'
+                    'should be a floating point number' % mvalue)
+
+            metrics.append((Metric(metric_name, [aggregator]), mvalue))
+            metrics_values.append({
+                'name': mname,
+                'value': mvalue,
+                'aggregator': aggregator.name,
+            })
+
+        mm = yield self.backend.worker.get_metric_manager()
+        [mm.oneshot(metric, value) for metric, value in metrics]
+
+        returnValue(metrics_values)
+
+
+class MetricWorker(Worker):
+    def __init__(self, *args, **kwargs):
+        super(MetricWorker, self).__init__(*args, **kwargs)
+        self._started_d = Deferred()
+
+    @inlineCallbacks
+    def startWorker(self):
+        self._metric_manager = yield self.start_publisher(
+            MetricManager, '%s.' % self.config.get('prefix'))
+        self._started_d.callback(self._metric_manager)
+
+    @inlineCallbacks
+    def stopWorker(self):
+        if not self._started_d.called:
+            yield self._started_d
+        self._metric_manager.stop()
+
+    def get_metric_manager(self):
+        if self._started_d.called:
+            return succeed(self._metric_manager)
+        return self._started_d
+
 
 class GraphiteBackendConfig(MetricsBackend.config_class):
     graphite_url = ConfigText(
         "Url for the graphite web server to query",
         default='http://127.0.0.1:8080')
+
+    prefix = ConfigText(
+        "Prefix for all metric names. Defaults to 'go.campaigns'",
+        default='go.campaigns')
 
     persistent = ConfigBool(
         ("Flag given to treq telling it whether to maintain a single "
@@ -166,6 +238,30 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
          "rejected."),
         default=10000)
 
+    amqp_hostname = ConfigText(
+        "Hostname for where AMQP broker is located",
+        default='127.0.0.1')
+
+    amqp_port = ConfigInt(
+        "Port to connect to the AMQP broker",
+        default=5672)
+
+    amqp_username = ConfigText(
+        "Username to connect to the AMQP broker",
+        default="guest")
+
+    amqp_password = ConfigText(
+        "Password to connect to the AMQP broker",
+        default="guest")
+
+    amqp_vhost = ConfigText(
+        "Virtualhost for AMQP broker",
+        default="/")
+
+    amqp_spec = ConfigText(
+        "Spec file for AMQP",
+        default="amqp-spec-0-8.xml")
+
     def post_validate(self):
         auth = (self.username, self.password)
         exists = [x is not None for x in auth]
@@ -179,3 +275,18 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
 class GraphiteBackend(MetricsBackend):
     model_class = GraphiteMetrics
     config_class = GraphiteBackendConfig
+
+    def initialize(self):
+        config = self.config
+        worker_creator = WorkerCreator({
+            'hostname': config.amqp_hostname,
+            'port': config.amqp_port,
+            'username': config.amqp_username,
+            'password': config.amqp_password,
+            'vhost': config.amqp_vhost,
+            'specfile': config.amqp_spec,
+            })
+        self.worker = worker_creator.create_worker_by_class(
+            MetricWorker, {
+                'prefix': config.prefix
+            })

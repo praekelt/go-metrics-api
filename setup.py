@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="go-metrics-api",
-    version="0.1.4",
+    version="0.1.5a",
     url='http://github.com/praekelt/go-metrics-api',
     license='BSD',
     description="An API for querying vumi-go metrics",
@@ -16,6 +16,7 @@ setup(
         'cyclone',
         'go_api>=0.2.0',
         'confmodel==0.2.0',
+        'vumi>=0.5.21',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
