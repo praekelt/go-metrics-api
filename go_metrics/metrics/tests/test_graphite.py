@@ -586,11 +586,11 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
         backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
-        res = yield metrics.fire(foo=1.7)
+        res = yield metrics.fire(**{'foo.avg': 1.7})
         [metric] = res
 
         self.assertEqual(metric, {
-            'name': 'foo',
+            'name': 'foo.avg',
             'value': 1.7,
             'aggregator': 'avg',
         })
@@ -600,14 +600,14 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
         backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
-        res = yield metrics.fire(foo=1.2, oof=2.7)
+        res = yield metrics.fire(**{'foo.avg': 1.2, 'oof.avg': 2.7})
 
         self.assertEqual(sorted(res), sorted([{
-            'name': 'foo',
+            'name': 'foo.avg',
             'value': 1.2,
             'aggregator': 'avg',
         }, {
-            'name': 'oof',
+            'name': 'oof.avg',
             'value': 2.7,
             'aggregator': 'avg',
         }]))
@@ -617,7 +617,27 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
         backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
-        yield self.assertFailure(metrics.fire(foo='bar'), BadMetricsQueryError)
+        try:
+            yield metrics.fire(**{'foo.avg': 'bar'})
+        except BadMetricsQueryError as e:
+            self.assertEqual(
+                str(e), "'bar' is not a valid metric value,should be a "
+                "floating point number")
+        else:
+            self.fail("BadMetricQueryError not raised")
+
+    @inlineCallbacks
+    def test_post_request_bad_aggregator(self):
+        backend = yield self.mk_backend()
+        metrics = GraphiteMetrics(backend, 'owner-1')
+
+        try:
+            yield metrics.fire(**{'foo': 1.2})
+        except BadMetricsQueryError as e:
+            self.assertEqual(
+                str(e), "Aggregator 'foo' is not a valid aggregator")
+        else:
+            self.fail("BadMetricQueryError not raised")
 
     @inlineCallbacks
     def test_post_aggregators(self):
