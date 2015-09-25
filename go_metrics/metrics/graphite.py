@@ -301,3 +301,4 @@ class GraphiteBackend(MetricsBackend):
             MetricWorker, {
                 'prefix': config.prefix
             })
+        self.worker.startService()
