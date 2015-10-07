@@ -1,6 +1,6 @@
 from urlparse import parse_qs as _parse_qs
 
-from twisted.internet.defer import maybeDeferred
+from twisted.internet.defer import maybeDeferred, inlineCallbacks
 
 from confmodel import Config
 from confmodel.fields import ConfigDict
@@ -57,6 +57,10 @@ class MetricsApi(ApiApplication):
     def initialize(self, settings, config):
         config = MetricsApiConfig(config)
         self.backend = self.backend_class(config.backend)
+
+    @inlineCallbacks
+    def teardown(self):
+        yield self.backend.teardown()
 
     def get_metrics_model(self, owner_id):
         return self.backend.get_model(owner_id)
