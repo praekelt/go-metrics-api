@@ -16,8 +16,8 @@ import treq
 from confmodel.errors import ConfigError
 from confmodel.fields import ConfigText, ConfigBool, ConfigInt
 
-from vumi.blinkenlights.metrics import Metric, SUM, AVG, MAX, MIN, LAST
-from vumi.blinkenlights.metrics import MetricManager as BaseMetricManager
+from vumi.blinkenlights.metrics import (
+    Metric, MetricManager, SUM, AVG, MAX, MIN, LAST)
 from vumi.service import Worker, WorkerCreator
 
 from go_metrics.metrics.base import (
@@ -198,15 +198,6 @@ class GraphiteMetrics(Metrics):
         [mm.oneshot(metric, value) for metric, value in metrics]
 
         returnValue(metrics_values)
-
-
-class MetricManager(BaseMetricManager):
-    def start_polling(self):
-        # TODO remove once base metric manager works this way
-        self._task = LoopingCall(self.publish_metrics)
-        self._task_d = self._task.start(self._publish_interval, now=False)
-        self._task_d.addErrback(
-            lambda f: log.err(f, "MetricManager polling task died"))
 
 
 class MetricWorker(Worker):
