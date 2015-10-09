@@ -25,8 +25,15 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
         self.addCleanup(graphite.stop)
         returnValue(graphite)
 
+    @inlineCallbacks
     def mk_backend(self, **kw):
         kw.setdefault('persistent', False)
+        prefix = kw.setdefault('prefix', 'go.campaigns')
+        worker = yield self.get_worker({'prefix': prefix}, MetricWorker)
+
+        create_worker = staticmethod(lambda: worker)
+        self.patch(GraphiteBackend, 'create_worker', create_worker)
+
         backend = GraphiteBackend(kw)
         self.addCleanup(backend.teardown)
         returnValue(backend)
@@ -40,7 +47,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -75,7 +82,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -107,7 +114,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -146,7 +153,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(m=['stores.a.b.last', 'stores.b.a.max'])
@@ -177,7 +184,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(**{
@@ -194,7 +201,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
         """
         Requests for excessive amounts of data are rejected.
         """
-        backend = self.mk_backend()
+        backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         err = yield self.assertFailure(
@@ -225,7 +232,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         # Two metrics, 8640 points each.
@@ -256,7 +263,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(
+        backend = yield self.mk_backend(
             graphite_url=graphite.url, max_response_size=100000)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
@@ -281,7 +288,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         yield metrics.get(m=['stores.a.b.last'])
@@ -303,7 +310,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return ':('
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         err = yield self.assertFailure(metrics.get(), MetricsBackendError)
@@ -332,7 +339,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         self.assertEqual(
@@ -364,7 +371,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(
@@ -428,7 +435,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(
@@ -474,7 +481,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             }])
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         data = yield metrics.get(
@@ -519,7 +526,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
     @inlineCallbacks
     def test_get_null_handling_unrecognised(self):
         graphite = yield self.mk_graphite()
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         err = yield self.assertFailure(
@@ -536,10 +543,12 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(
+        print 1111
+        backend = yield self.mk_backend(
             graphite_url=graphite.url,
             username="root",
             password="toor")
+        print 222
 
         metrics = GraphiteMetrics(backend, 'owner-1')
 
@@ -564,7 +573,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        backend = self.mk_backend(graphite_url=graphite.url)
+        backend = yield self.mk_backend(graphite_url=graphite.url)
 
         metrics = GraphiteMetrics(backend, 'owner-1')
 
@@ -580,7 +589,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
 
     @inlineCallbacks
     def test_post_request_single(self):
-        backend = self.mk_backend()
+        backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         res = yield metrics.fire(**{'foo.avg': 1.7})
@@ -594,7 +603,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
 
     @inlineCallbacks
     def test_post_request_multiple(self):
-        backend = self.mk_backend()
+        backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         res = yield metrics.fire(**{'foo.avg': 1.2, 'oof.avg': 2.7})
@@ -611,7 +620,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
 
     @inlineCallbacks
     def test_post_request_bad_value(self):
-        backend = self.mk_backend()
+        backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         try:
@@ -625,7 +634,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
 
     @inlineCallbacks
     def test_post_request_bad_aggregator(self):
-        backend = self.mk_backend()
+        backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         try:
@@ -638,7 +647,7 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
 
     @inlineCallbacks
     def test_post_aggregators(self):
-        backend = self.mk_backend()
+        backend = yield self.mk_backend()
         metrics = GraphiteMetrics(backend, 'owner-1')
 
         for agg in GraphiteMetrics.aggregators:
