@@ -543,12 +543,10 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
             return '{}'
 
         graphite = yield self.mk_graphite(handler)
-        print 1111
         backend = yield self.mk_backend(
             graphite_url=graphite.url,
             username="root",
             password="toor")
-        print 222
 
         metrics = GraphiteMetrics(backend, 'owner-1')
 
