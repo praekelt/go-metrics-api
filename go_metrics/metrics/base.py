@@ -68,6 +68,11 @@ class MetricsBackend(object):
         Optionally override for backend-specific setup
         """
 
+    def teardown(self):
+        """
+        Optionally override for backend-specific tearing down
+        """
+
     def get_model(self, owner_id):
         """
         Creates a new instance of the backend's metric model from the given
