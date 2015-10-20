@@ -28,10 +28,14 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
     @inlineCallbacks
     def mk_backend(self, **kw):
         kw.setdefault('persistent', False)
+        prefix = kw.setdefault('prefix', 'go.campaigns')
+        worker = yield self.get_worker({'prefix': prefix}, MetricWorker)
+
+        create_worker = staticmethod(lambda: worker)
+        self.patch(GraphiteBackend, 'create_worker', create_worker)
+
         backend = GraphiteBackend(kw)
-        backend.worker = yield self.get_worker({
-            'prefix': backend.config.prefix,
-            }, MetricWorker)
+        self.addCleanup(backend.teardown)
         returnValue(backend)
 
     @inlineCallbacks

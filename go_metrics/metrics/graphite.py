@@ -8,6 +8,8 @@ from urlparse import urljoin
 
 from twisted.internet.defer import (
     Deferred, inlineCallbacks, succeed, returnValue)
+from twisted.internet.task import LoopingCall
+from twisted.python import log
 
 import treq
 
@@ -297,8 +299,14 @@ class GraphiteBackend(MetricsBackend):
             'vhost': config.amqp_vhost,
             'specfile': config.amqp_spec,
             })
-        self.worker = worker_creator.create_worker_by_class(
-            MetricWorker, {
-                'prefix': config.prefix
-            })
+
+        self.worker = self.create_worker()
         self.worker.startService()
+
+    def create_worker(self):
+        return worker_creator.create_worker_by_class(
+            MetricWorker, {'prefix': config.prefix})
+
+    @inlineCallbacks
+    def teardown(self):
+        yield self.worker.stopService()
