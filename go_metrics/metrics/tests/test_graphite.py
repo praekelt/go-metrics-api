@@ -8,11 +8,35 @@ from confmodel.errors import ConfigError
 
 from go_api.cyclone.helpers import MockHttpServer
 
+import go_metrics.metrics.graphite
 from go_metrics.metrics.base import MetricsBackendError, BadMetricsQueryError
 from go_metrics.metrics.graphite import (
     GraphiteMetrics, GraphiteBackend, GraphiteBackendConfig, MetricWorker)
 
 from vumi.tests.utils import VumiWorkerTestCase
+
+
+class DummyWorkerCreatorClass(object):
+    def __init__(self, test_case, expected_config, worker):
+        self._test_case = test_case
+        self._expected_config = expected_config
+        self._worker = worker
+
+    def __call__(self, config):
+        return DummyWorkerCreator(
+            self._test_case, self._expected_config, self._worker)
+
+
+class DummyWorkerCreator(object):
+    def __init__(self, test_case, expected_config, worker):
+        self._test_case = test_case
+        self._expected_config = expected_config
+        self._worker = worker
+
+    def create_worker_by_class(self, cls, cfg):
+        self._test_case.assertEqual(cls, MetricWorker)
+        self._test_case.assertEqual(cfg, self._expected_config)
+        return self._worker
 
 
 class TestGraphiteMetrics(VumiWorkerTestCase):
@@ -31,8 +55,10 @@ class TestGraphiteMetrics(VumiWorkerTestCase):
         prefix = kw.setdefault('prefix', 'go.campaigns')
         worker = yield self.get_worker({'prefix': prefix}, MetricWorker)
 
-        create_worker = staticmethod(lambda: worker)
-        self.patch(GraphiteBackend, 'create_worker', create_worker)
+        worker_creator_cls = DummyWorkerCreatorClass(
+            self, {'prefix': prefix}, worker)
+        self.patch(
+            go_metrics.metrics.graphite, 'WorkerCreator', worker_creator_cls)
 
         backend = GraphiteBackend(kw)
         self.addCleanup(backend.teardown)
