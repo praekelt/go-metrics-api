@@ -70,7 +70,7 @@ class GraphiteMetrics(Metrics):
                 "Aggregator '%s' is not a valid aggregator" % aggregator_name)
         return aggregator
 
-    def _get_full_metric_name(self, name, disable_auto_prefix):
+    def _get_full_metric_name(self, name, disable_auto_prefix=False):
         if disable_auto_prefix:
             return '%s.%s' % (self.owner_id, name)
         return '%s.%s.%s' % (
