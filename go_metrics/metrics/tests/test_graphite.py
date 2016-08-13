@@ -13,7 +13,6 @@ from go_metrics.metrics.base import MetricsBackendError, BadMetricsQueryError
 from go_metrics.metrics.graphite import (
     GraphiteMetrics, GraphiteBackend, GraphiteBackendConfig, MetricWorker)
 
-# from vumi.tests.utils import VumiWorkerTestCase
 from vumi.tests.helpers import VumiTestCase, WorkerHelper
 
 
