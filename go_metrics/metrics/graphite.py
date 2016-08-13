@@ -70,7 +70,9 @@ class GraphiteMetrics(Metrics):
                 "Aggregator '%s' is not a valid aggregator" % aggregator_name)
         return aggregator
 
-    def _get_full_metric_name(self, name):
+    def _get_full_metric_name(self, name, disable_auto_prefix=False):
+        if disable_auto_prefix:
+            return '%s.%s' % (self.owner_id, name)
         return '%s.%s.%s' % (
             self.backend.config.prefix, self.owner_id, name)
 
@@ -176,7 +178,10 @@ class GraphiteMetrics(Metrics):
         for mname, mvalue in kw.iteritems():
             aggregator = self._agg_from_name(mname)
             metric_name = strip_aggregator(
-                self._get_full_metric_name(mname), aggregator)
+                self._get_full_metric_name(
+                    mname,
+                    self.backend.config.disable_auto_prefix),
+                aggregator)
 
             try:
                 mvalue = float(mvalue)
@@ -229,6 +234,11 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
     prefix = ConfigText(
         "Prefix for all metric names. Defaults to 'go.campaigns'",
         default='go.campaigns')
+
+    disable_auto_prefix = ConfigBool(
+        "Disable prefixing, sometimes leads to double prefixing depending"
+        "on the configuration.",
+        default=False)
 
     persistent = ConfigBool(
         ("Flag given to treq telling it whether to maintain a single "

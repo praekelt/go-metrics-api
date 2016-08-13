@@ -13,7 +13,7 @@ from go_metrics.metrics.base import MetricsBackendError, BadMetricsQueryError
 from go_metrics.metrics.graphite import (
     GraphiteMetrics, GraphiteBackend, GraphiteBackendConfig, MetricWorker)
 
-from vumi.tests.utils import VumiWorkerTestCase
+from vumi.tests.helpers import VumiTestCase, WorkerHelper
 
 
 class DummyWorkerCreatorClass(object):
@@ -39,7 +39,13 @@ class DummyWorkerCreator(object):
         return self._worker
 
 
-class TestGraphiteMetrics(VumiWorkerTestCase):
+class TestGraphiteMetrics(VumiTestCase):
+
+    def setUp(self):
+        self.worker_helper = self.add_helper(WorkerHelper())
+
+    def get_worker(self, config, worker_class):
+        return self.worker_helper.get_worker(worker_class, config)
 
     @inlineCallbacks
     def mk_graphite(self, handler=None):
