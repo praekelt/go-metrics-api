@@ -3,6 +3,7 @@ Tests for the metrics API's server.
 """
 import json
 import yaml
+from base64 import b64encode
 
 from twisted.internet.defer import succeed, inlineCallbacks, maybeDeferred
 from twisted.trial.unittest import TestCase
@@ -29,6 +30,59 @@ class TestMetricsApi(TestCase):
             yaml.safe_dump(kw, fp)
 
         return tempfile
+
+    @inlineCallbacks
+    def test_basic_auth(self):
+        class AuthBackendConfig(DummyBackend.config_class):
+            basicauth_username = ConfigText("username")
+            basicauth_password = ConfigText("password")
+
+        class AuthBackend(DummyBackend):
+            config_class = AuthBackendConfig
+
+        class AuthApi(DummyMetricsApi):
+            backend_class = AuthBackend
+
+        app = AuthApi(self.mk_config(backend={
+            'basicauth_username': 'username',
+            'basicauth_password': 'password',
+        }))
+        app.backend.fixtures.add(result={'grault': 'garply'})
+
+        get = AppHelper(app).get
+
+        resp = yield get('/metrics/')
+        self.assertEqual(
+            resp.headers.getRawHeaders('www-authenticate'),
+            ['Basic realm="Metrics API"'])
+        self.assertEqual(
+            (yield resp.json()),
+            {
+                'status_code': 401,
+                'reason': 'Authentication Required'
+            })
+
+        resp = yield get('/metrics/', headers={
+            'Authorization': 'Basic %s' % (b64encode('obviously:wrong'),)
+        })
+        self.assertEqual(
+            resp.headers.getRawHeaders('www-authenticate'),
+            ['Basic realm="Metrics API"'])
+        self.assertEqual(
+            (yield resp.json()),
+            {
+                'status_code': 401,
+                'reason': 'Authentication Failed'
+            })
+
+        resp = yield get('/metrics/', headers={
+            'Authorization': 'Basic %s' % (b64encode('username:password'),)
+        })
+        self.assertEqual(
+            resp.headers.getRawHeaders('www-authenticate'), None)
+        self.assertEqual(
+            (yield resp.json()),
+            {'grault': 'garply'})
 
     def test_initialize_backend(self):
         class ToyBackendConfig(DummyBackend.config_class):
