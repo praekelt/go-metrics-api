@@ -32,14 +32,20 @@ def HTTPBasic(method):
 
         msg = "Authentication Required"
         if "Authorization" in self.request.headers:
-            auth_type, data = self.request.headers["Authorization"].split()
-            if auth_type == "Basic":
-                usr, pwd = base64.b64decode(data).split(":", 1)
-                if (usr == config.basicauth_username and
-                        pwd == config.basicauth_password):
-                        self._current_user = usr
-                        return method(self, *args, **kwargs)
-                msg = "Authentication Failed"
+            try:
+                auth_type, data = self.request.headers["Authorization"].split()
+                if auth_type == "Basic":
+                    usr, pwd = base64.b64decode(data).split(":", 1)
+                    if (usr == config.basicauth_username and
+                            pwd == config.basicauth_password):
+                            self._current_user = usr
+                            return method(self, *args, **kwargs)
+                    msg = "Authentication Failed"
+            except (ValueError, TypeError):
+                # NOTE: ValueError for when the split() doesn't work
+                #       TypeError for when the data isn't base64 decodeable
+                msg = "Invalid Authorization header"
+
         raise HTTPAuthenticationRequired(
             log_message=msg, auth_type="Basic", realm="Metrics API")
 

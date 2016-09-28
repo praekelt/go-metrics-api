@@ -84,6 +84,34 @@ class TestMetricsApi(TestCase):
             (yield resp.json()),
             {'grault': 'garply'})
 
+        # Test invalid Authorization header
+        resp = yield get('/metrics/', headers={
+            'Authorization': 'Garbage',
+        })
+        self.assertEqual(
+            resp.headers.getRawHeaders('www-authenticate'),
+            ['Basic realm="Metrics API"'])
+        self.assertEqual(
+            (yield resp.json()),
+            {
+                'status_code': 401,
+                'reason': 'Invalid Authorization header'
+            })
+
+        # Test invalid Authorization data
+        resp = yield get('/metrics/', headers={
+            'Authorization': 'Basic 1',
+        })
+        self.assertEqual(
+            resp.headers.getRawHeaders('www-authenticate'),
+            ['Basic realm="Metrics API"'])
+        self.assertEqual(
+            (yield resp.json()),
+            {
+                'status_code': 401,
+                'reason': 'Invalid Authorization header'
+            })
+
     def test_initialize_backend(self):
         class ToyBackendConfig(DummyBackend.config_class):
             foo = ConfigText("A foo")
