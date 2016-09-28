@@ -269,7 +269,7 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
 
     password = ConfigText(
         ("Basic auth password for authenticating requests to graphite. "
-         "DEPRECATED, use graphite_username instead."),
+         "DEPRECATED, use graphite_password instead."),
         required=False)
 
     max_response_size = ConfigInt(
