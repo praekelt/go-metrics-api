@@ -13,6 +13,7 @@ import treq
 
 from confmodel.errors import ConfigError
 from confmodel.fields import ConfigText, ConfigBool, ConfigInt
+from confmodel.fallbacks import SingleFieldFallback
 
 from vumi.blinkenlights.metrics import (
     Metric, MetricManager, SUM, AVG, MAX, MIN, LAST)
@@ -70,7 +71,9 @@ class GraphiteMetrics(Metrics):
                 "Aggregator '%s' is not a valid aggregator" % aggregator_name)
         return aggregator
 
-    def _get_full_metric_name(self, name):
+    def _get_full_metric_name(self, name, disable_auto_prefix=False):
+        if disable_auto_prefix:
+            return '%s.%s' % (self.owner_id, name)
         return '%s.%s.%s' % (
             self.backend.config.prefix, self.owner_id, name)
 
@@ -176,7 +179,10 @@ class GraphiteMetrics(Metrics):
         for mname, mvalue in kw.iteritems():
             aggregator = self._agg_from_name(mname)
             metric_name = strip_aggregator(
-                self._get_full_metric_name(mname), aggregator)
+                self._get_full_metric_name(
+                    mname,
+                    self.backend.config.disable_auto_prefix),
+                aggregator)
 
             try:
                 mvalue = float(mvalue)
@@ -230,17 +236,40 @@ class GraphiteBackendConfig(MetricsBackend.config_class):
         "Prefix for all metric names. Defaults to 'go.campaigns'",
         default='go.campaigns')
 
+    disable_auto_prefix = ConfigBool(
+        "Disable prefixing, sometimes leads to double prefixing depending"
+        "on the configuration.",
+        default=False)
+
     persistent = ConfigBool(
         ("Flag given to treq telling it whether to maintain a single "
          "connection for the requests made to graphite's web app."),
         default=True)
 
-    username = ConfigText(
+    basicauth_username = ConfigText(
+        'Username for Basic Authentication for the Metrics API.',
+        required=False)
+
+    basicauth_password = ConfigText(
+        'Password for Basic Authentication for the Metrics API.',
+        required=False)
+
+    graphite_username = ConfigText(
         "Basic auth username for authenticating requests to graphite.",
+        required=False, fallbacks=[SingleFieldFallback("username")])
+
+    graphite_password = ConfigText(
+        "Basic auth username for authenticating requests to graphite.",
+        required=False, fallbacks=[SingleFieldFallback("password")])
+
+    username = ConfigText(
+        ("Basic auth username for authenticating requests to graphite. "
+         "DEPRECATED, use graphite_username instead."),
         required=False)
 
     password = ConfigText(
-        "Basic auth password for authenticating requests to graphite.",
+        ("Basic auth password for authenticating requests to graphite. "
+         "DEPRECATED, use graphite_password instead."),
         required=False)
 
     max_response_size = ConfigInt(

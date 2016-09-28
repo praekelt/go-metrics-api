@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="go-metrics-api",
-    version="0.1.8",
+    version="0.2.0",
     url='http://github.com/praekelt/go-metrics-api',
     license='BSD',
     description="An API for querying vumi-go metrics",
@@ -12,6 +12,9 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
+        # We install pyasn1 first, because setuptools gets confused if it
+        # installs pyasn1-modules first.
+        'pyasn1',
         'treq',
         'cyclone',
         'go_api>=0.2.0',
